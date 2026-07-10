@@ -1,0 +1,3475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OMR Scoresheet & DepEd 15 s. 2026 Suite</title>
+    
+    <!-- Tailwind CSS for high-fidelity fluid layout design -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#1e293b',
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- FontAwesome for standard vector interface icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght=300;400;500;600;700;800;900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #0f172a;
+        }
+
+        /* Interactive Canvas for Pin Dragging and alignment visualization */
+        #interactive-container {
+            position: relative;
+            display: inline-block;
+            max-width: 100%;
+        }
+        #scan-display-canvas {
+            max-width: 100%;
+            height: auto;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+            display: block;
+        }
+        
+        /* Premium Custom Scrollbars */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .tab-active { border-bottom: 2px solid #3b82f6; color: #3b82f6; font-weight: 600; }
+        .tab-inactive { color: #64748b; font-weight: 500; }
+
+        @keyframes pulse-border {
+            0%, 100% { border-color: rgba(59, 130, 246, 0.4); }
+            50% { border-color: rgba(59, 130, 246, 1); }
+        }
+        .camera-scanner-hud {
+            border: 2.5px solid rgba(59, 130, 246, 0.5);
+            animation: pulse-border 2s infinite;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Screen Shutter Flash Feedback Overlay -->
+    <div id="camera-flash" class="fixed inset-0 bg-white z-[110] opacity-0 pointer-events-none transition-opacity duration-150"></div>
+
+    <!-- SECURE SCREEN LOCK OVERLAY -->
+    <div id="screen-lock-overlay" class="hidden fixed inset-0 z-[150] bg-slate-950/85 backdrop-blur-xl flex flex-col items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-8 shadow-2xl border border-slate-100 flex flex-col items-center animate-fadeIn">
+            <div class="bg-blue-50 text-blue-600 p-4 rounded-full mb-4">
+                <i id="lock-icon-secure" class="fa-solid fa-lock text-2xl"></i>
+            </div>
+            <h3 id="lock-title" class="font-bold text-lg text-slate-800">Secure Gradebook</h3>
+            <p id="lock-desc" class="text-xs text-slate-400 text-center mt-1 mb-6">Enter secure PIN to unlock active ledgers</p>
+            
+            <!-- PIN Indicators -->
+            <div class="flex gap-4 mb-6">
+                <span id="pin-dot-1" class="w-3.5 h-3.5 rounded-full bg-slate-200"></span>
+                <span id="pin-dot-2" class="w-3.5 h-3.5 rounded-full bg-slate-200"></span>
+                <span id="pin-dot-3" class="w-3.5 h-3.5 rounded-full bg-slate-200"></span>
+                <span id="pin-dot-4" class="w-3.5 h-3.5 rounded-full bg-slate-200"></span>
+            </div>
+
+            <!-- Lock Security Message -->
+            <div id="lock-status-msg" class="text-xs font-semibold text-rose-500 h-5 mb-4"></div>
+
+            <!-- PIN Keypad Grid -->
+            <div class="grid grid-cols-3 gap-3 w-full max-w-[240px]">
+                <button onclick="pressSecureKey('1')" class="bg-slate-50 hover:bg-slate-100 active:bg-slate-200 text-slate-700 font-bold py-3.5 rounded-2xl transition-colors text-base outline-none">1</button>
+                <button onclick="pressSecureKey('2')" class="bg-slate-50 hover:bg-slate-100 active:bg-slate-200 text-slate-700 font-bold py-3.5 rounded-2xl transition-colors text-base outline-none">2</button>
+                <button onclick="pressSecureKey('3')" class="bg-slate-50 hover:bg-slate-100 active:bg-slate-200 text-slate-700 font-bold py-3.5 rounded-2xl transition-colors text-base outline-none">3</button>
+                <button onclick="pressSecureKey('4')" class="bg-slate-50 hover:bg-slate-100 active:bg-slate-200 text-slate-700 font-bold py-3.5 rounded-2xl transition-colors text-base outline-none">4</button>
+                <button onclick="pressSecureKey('5')" class="bg-slate-50 hover:bg-slate-100 active:bg-slate-200 text-slate-700 font-bold py-3.5 rounded-2xl transition-colors text-base outline-none">5</button>
+                <button onclick="pressSecureKey('6')" class="bg-slate-50 hover:bg-slate-100 active:bg-slate-200 text-slate-700 font-bold py-3.5 rounded-2xl transition-colors text-base outline-none">6</button>
+                <button onclick="pressSecureKey('7')" class="bg-slate-50 hover:bg-slate-100 active:bg-slate-200 text-slate-700 font-bold py-3.5 rounded-2xl transition-colors text-base outline-none">7</button>
+                <button onclick="pressSecureKey('8')" class="bg-slate-50 hover:bg-slate-100 active:bg-slate-200 text-slate-700 font-bold py-3.5 rounded-2xl transition-colors text-base outline-none">8</button>
+                <button onclick="pressSecureKey('9')" class="bg-slate-50 hover:bg-slate-100 active:bg-slate-200 text-slate-700 font-bold py-3.5 rounded-2xl transition-colors text-base outline-none">9</button>
+                <button onclick="clearSecureKey()" class="text-rose-500 font-bold py-3.5 rounded-2xl text-xs flex items-center justify-center hover:bg-rose-50 transition-colors">CLR</button>
+                <button onclick="pressSecureKey('0')" class="bg-slate-50 hover:bg-slate-100 active:bg-slate-200 text-slate-700 font-bold py-3.5 rounded-2xl transition-colors text-base outline-none">0</button>
+                <button onclick="deleteSecureKey()" class="text-slate-500 font-bold py-3.5 rounded-2xl text-sm flex items-center justify-center hover:bg-slate-100 transition-colors"><i class="fa-solid fa-delete-left"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-[200] space-y-2"></div>
+
+    <!-- Navigation Header -->
+    <nav class="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center gap-3">
+                    <div class="bg-blue-600 text-white p-2.5 rounded-xl">
+                        <i class="fa-solid fa-graduation-cap text-xl"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-lg tracking-tight text-gray-900 block leading-none">OMR Grade Suite</span>
+                            <div class="flex items-center gap-1 bg-slate-100 hover:bg-slate-200 transition-colors px-2 py-0.5 rounded cursor-pointer group" onclick="openCloudSyncModal()">
+                                <span id="cloud-status-indicator" class="w-1.5 h-1.5 rounded-full bg-slate-400 group-hover:scale-110 transition-transform"></span>
+                                <span id="cloud-status-text" class="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Local Workspace</span>
+                            </div>
+                        </div>
+                        <span class="text-[10px] text-gray-500 font-semibold tracking-wide uppercase mt-1 block">DO 15 s. 2026 Assessment Engine</span>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-1 md:space-x-6 overflow-x-auto">
+                    <button onclick="switchTab('generate')" id="tab-generate" class="tab-active px-3 py-5 h-full transition-colors duration-200 flex items-center gap-2 text-sm">
+                        <i class="fa-solid fa-file-signature"></i><span class="hidden sm:inline">1. Design Sheet</span>
+                    </button>
+                    <button onclick="switchTab('tos')" id="tab-tos" class="tab-inactive px-3 py-5 h-full transition-colors duration-200 flex items-center gap-2 text-sm hover:text-blue-500">
+                        <i class="fa-solid fa-table-list"></i><span class="hidden sm:inline">2. TOS & Keys</span>
+                    </button>
+                    <button onclick="switchTab('scan')" id="tab-scan" class="tab-inactive px-3 py-5 h-full transition-colors duration-200 flex items-center gap-2 text-sm hover:text-blue-500">
+                        <i class="fa-solid fa-camera-retro"></i><span class="hidden sm:inline">3. OMR Scan</span>
+                    </button>
+                    <button onclick="switchTab('class')" id="tab-class" class="tab-inactive px-3 py-5 h-full transition-colors duration-200 flex items-center gap-2 text-sm hover:text-blue-500">
+                        <i class="fa-solid fa-chalkboard-user"></i><span class="hidden sm:inline">4. Class Ledgers</span>
+                    </button>
+                    <button onclick="toggleLockScreenManual()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-800 p-2.5 rounded-xl transition-all duration-150 shrink-0" title="Lock Workspace">
+                        <i class="fa-solid fa-lock"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Grid -->
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+        
+        <!-- TAB 1: DESIGN & GENERATOR -->
+        <div id="view-generate" class="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fadeIn">
+            <!-- Sidebar Controls -->
+            <div class="lg:col-span-4 space-y-6">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+                    <h2 class="text-lg font-bold mb-4 text-slate-800 flex items-center"><i class="fa-solid fa-sliders text-blue-500 mr-2"></i>Scoresheet Design</h2>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Learning Subject</label>
+                            <input type="text" id="cfg-subject" value="Mathematics" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow text-sm" oninput="handleGenerate()">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Assessment Type</label>
+                            <select id="cfg-title" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm" onchange="applyConditionalQuestions()">
+                                <option value="Summative Test 1" selected>Summative Test 1</option>
+                                <option value="Summative Test 2">Summative Test 2</option>
+                                <option value="Term Examination">Term Examination</option>
+                            </select>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Quarter / Term</label>
+                                <select id="cfg-term" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm" onchange="handleGenerate()">
+                                    <option value="Quarter 1" selected>Quarter 1</option>
+                                    <option value="Quarter 2">Quarter 2</option>
+                                    <option value="Quarter 3">Quarter 3</option>
+                                    <option value="Quarter 4">Quarter 4</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Key Stage</label>
+                                <select id="cfg-keystage" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm" onchange="applyConditionalQuestions()">
+                                    <option value="Key Stage 1">Key Stage 1 (K-3)</option>
+                                    <option value="Key Stage 2">Key Stage 2 (4-6)</option>
+                                    <option value="Key Stage 3" selected>Key Stage 3 (7-10)</option>
+                                    <option value="Key Stage 4">Key Stage 4 (11-12)</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Total Items</label>
+                                <input type="number" id="cfg-questions" value="25" min="1" max="100" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm" onchange="syncTOSFromStructure()">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Options / Item</label>
+                                <select id="cfg-options" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm" onchange="syncTOSFromStructure(); handleGenerate();">
+                                    <option value="3">3 (A-C)</option>
+                                    <option value="4" selected>4 (A-D)</option>
+                                    <option value="5">5 (A-E)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="pt-4 border-t border-slate-100">
+                            <button onclick="handleGenerate()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-xl transition-colors flex items-center justify-center text-sm shadow-sm">
+                                <i class="fa-solid fa-wand-magic-sparkles mr-2"></i> Update Printable Layout
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-blue-50 rounded-2xl p-5 border border-blue-100">
+                    <h3 class="font-bold text-blue-800 text-sm mb-2 flex items-center"><i class="fa-solid fa-circle-info mr-2"></i>Dual A5 Lengthwise Canvas</h3>
+                    <p class="text-xs text-blue-900/80 mb-3 leading-relaxed">
+                        To optimize paper usage, the rendering engine creates **two identical A5 Portrait scoresheets side-by-side** on a single A4 Landscape canvas.
+                    </p>
+                    <ul class="text-xs text-blue-900/70 space-y-1.5 list-disc pl-4 leading-relaxed">
+                        <li>Print or export the A4 Landscape canvas.</li>
+                        <li>Cut vertically along the center-dashed guide line.</li>
+                        <li>Distribute individual A5 scoresheets to students.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Preview Sheet Column -->
+            <div class="lg:col-span-8 flex flex-col">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex-grow flex flex-col items-center">
+                    <div class="w-full flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-800">Printable Layout Preview</h2>
+                            <span class="text-xs text-slate-400">High-Resolution A4 Landscape Document Model</span>
+                        </div>
+                        <button onclick="downloadSheet()" class="w-full sm:w-auto bg-slate-800 hover:bg-slate-900 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2 shadow-sm">
+                            <i class="fa-solid fa-download"></i> Save PNG Document
+                        </button>
+                    </div>
+                    
+                    <div class="bg-slate-100 p-4 rounded-xl w-full flex justify-center items-center overflow-auto max-h-[70vh] border border-slate-200">
+                        <canvas id="generator-canvas" class="hidden"></canvas>
+                        <img id="generator-preview" class="shadow-lg bg-white border border-slate-300 rounded" alt="Generated dual OMR sheet" style="max-height: 550px; width: auto;" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: TABLE OF SPECIFICATIONS (TOS) & KEYS -->
+        <div id="view-tos" class="hidden space-y-6 animate-fadeIn">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <!-- Left Content: TOS Blueprint Matrix -->
+                <div class="lg:col-span-8 space-y-6">
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                            <div>
+                                <h2 class="text-lg font-bold text-slate-800 flex items-center"><i class="fa-solid fa-table-list text-blue-500 mr-2"></i>TOS Learning Targets</h2>
+                                <p class="text-xs text-slate-500 mt-1">Structure basic competencies and align items across Easy, Average, or Difficult cognitive levels.</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="quickFillTOS()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-xl text-xs font-bold transition-colors flex items-center gap-1 border border-slate-200">
+                                    <i class="fa-solid fa-bolt"></i> Pre-fill Demo
+                                </button>
+                                <button onclick="addNewTOSRow()" class="bg-blue-50 hover:bg-blue-100 text-blue-600 px-3 py-1.5 rounded-xl text-xs font-bold transition-colors flex items-center gap-1 border border-blue-200">
+                                    <i class="fa-solid fa-plus"></i> Add Competency
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- TOS Grid Table -->
+                        <div class="overflow-x-auto border border-slate-200 rounded-xl">
+                            <table class="w-full text-xs text-left text-slate-500">
+                                <thead class="text-[10px] text-slate-700 uppercase bg-slate-50 border-b border-slate-200 font-bold">
+                                    <tr>
+                                        <th class="px-4 py-3">Learning Competency Description</th>
+                                        <th class="px-4 py-3 w-28 text-center">Assigned Items</th>
+                                        <th class="px-4 py-3 w-24">Easy Range</th>
+                                        <th class="px-4 py-3 w-24">Average Range</th>
+                                        <th class="px-4 py-3 w-24">Difficult Range</th>
+                                        <th class="px-4 py-3 w-28 text-center font-mono">Answers CSV</th>
+                                        <th class="px-3 py-3 w-16 text-center">Items</th>
+                                        <th class="px-3 py-3 w-12 text-right"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tos-blueprint-body" class="divide-y divide-slate-100 bg-white">
+                                    <!-- Dynamic rows loaded programmatically -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="mt-4 pt-4 border-t border-slate-100 flex justify-end">
+                            <button onclick="applyTOSBlueprint()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-sm">
+                                <i class="fa-solid fa-circle-check"></i> Apply Blueprint & Sync Answer Matrix
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Content: Answer Matrix -->
+                <div class="lg:col-span-4 space-y-6">
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex flex-col h-full min-h-[500px]">
+                        <div class="mb-4">
+                            <h3 class="font-bold text-slate-800 text-sm flex items-center"><i class="fa-solid fa-key text-amber-500 mr-2"></i>Answer Key Matrix</h3>
+                            <p class="text-[11px] text-slate-500 mt-0.5">Quickly select or edit master keys. Double check keys prior to grading.</p>
+                        </div>
+
+                        <div class="flex-grow overflow-y-auto pr-1 max-h-[550px] border border-slate-100 rounded-xl">
+                            <table class="w-full text-xs text-left text-slate-500">
+                                <thead class="text-[10px] text-slate-700 uppercase bg-slate-50 sticky top-0 z-10 font-bold">
+                                    <tr>
+                                        <th class="px-3 py-2 w-14">Item #</th>
+                                        <th class="px-3 py-2">Select Key</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tos-answer-matrix-body" class="divide-y divide-slate-100 bg-white">
+                                    <!-- Options rendered programmatically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: SCANNER & GRADING PANEL -->
+        <div id="view-scan" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fadeIn">
+            <!-- Aligning Canvas Container -->
+            <div class="lg:col-span-8 space-y-6">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-800 flex items-center"><i class="fa-solid fa-crosshairs text-blue-500 mr-2"></i>Perspectives & Calibration</h2>
+                            <p class="text-xs text-slate-500 mt-0.5">Drag corner pins to align sheet coordinates. Click **Auto Align** to trigger algorithmic snapping.</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2 w-full sm:w-auto">
+                            <button onclick="autoDetectCorners()" class="flex-grow sm:flex-none cursor-pointer bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold py-2 px-3 rounded-xl transition-colors text-xs flex items-center justify-center gap-1 shadow-sm">
+                                <i class="fa-solid fa-expand"></i> Auto Align
+                            </button>
+                            <button onclick="resetCalibrationPins()" class="flex-grow sm:flex-none cursor-pointer bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 font-bold py-2 px-3 rounded-xl transition-colors text-xs flex items-center justify-center gap-1">
+                                <i class="fa-solid fa-arrows-rotate"></i> Reset Pins
+                            </button>
+                            <button onclick="startCamera()" class="flex-grow sm:flex-none cursor-pointer bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 font-bold py-2 px-4 rounded-xl transition-colors text-xs flex items-center justify-center gap-1.5 shadow-sm">
+                                <i class="fa-solid fa-camera"></i> Live Video
+                            </button>
+                            <label class="flex-grow sm:flex-none cursor-pointer bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-bold py-2 px-4 rounded-xl transition-colors text-xs flex items-center justify-center gap-1.5 shadow-sm">
+                                <i class="fa-solid fa-cloud-arrow-up"></i> Upload Photo
+                                <input type="file" id="upload-image" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="relative w-full bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 flex items-center justify-center min-h-[420px] overflow-hidden shadow-inner" id="scanner-wrapper">
+                        <!-- Camera Screen Overlay -->
+                        <div id="camera-container" class="hidden absolute inset-0 bg-black z-20 flex flex-col items-center justify-center overflow-hidden">
+                            <video id="camera-video" class="w-full h-[calc(100%-60px)] object-contain bg-black" autoplay playsinline muted></video>
+                            <canvas id="camera-hud-canvas" class="absolute left-0 top-0 w-full h-[calc(100%-60px)] pointer-events-none object-contain z-30"></canvas>
+
+                            <!-- Bottom bar controls -->
+                            <div class="h-[60px] w-full flex items-center justify-center gap-4 bg-slate-900 z-35 shrink-0">
+                                <span id="camera-hud-status" class="text-xs font-mono font-bold text-blue-400 bg-blue-950/60 border border-blue-800 px-3 py-1 rounded-lg">Aligning...</span>
+                                <button onclick="capturePhoto()" class="bg-white hover:bg-slate-200 text-slate-900 px-6 py-2 rounded-full font-bold transition-colors text-sm">
+                                    <i class="fa-solid fa-camera-retro mr-1"></i> Capture Screen
+                                </button>
+                                <button onclick="stopCamera()" class="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-full font-bold transition-colors text-sm">
+                                    Close Video
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="upload-placeholder" class="text-center p-6 pointer-events-none">
+                            <i class="fa-solid fa-image text-5xl text-slate-300 mb-3"></i>
+                            <p class="text-slate-600 font-semibold text-sm">No Document Source Loaded</p>
+                            <p class="text-xs text-slate-400 mt-1">Acquire live camera feed or upload a cropped A5 image</p>
+                        </div>
+                        
+                        <!-- Drag-and-Drop Calibration Screen -->
+                        <div id="interactive-container" class="hidden touch-none">
+                            <canvas id="scan-display-canvas"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Graded Scoresheet Results -->
+            <div class="lg:col-span-4 flex flex-col space-y-6 font-medium text-slate-700">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+                    <h3 class="font-bold text-slate-800 mb-3 flex items-center"><i class="fa-solid fa-microchip text-purple-500 mr-2"></i>Analyze Sheet</h3>
+                    <p class="text-xs text-slate-500 mb-4 leading-relaxed">Executes perspective warping and dark-density algorithms to evaluate bubbles against your active Answer Key.</p>
+                    
+                    <!-- Darkness Tuning Slider -->
+                    <div class="mb-4 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-xs font-semibold text-slate-700">Contrast Threshold</span>
+                            <span id="sensitivity-value" class="text-xs font-bold text-blue-600">60%</span>
+                        </div>
+                        <input type="range" id="cfg-darkness-sens" min="20" max="90" value="60" oninput="updateSensitivityLabel(this.value)" class="w-full accent-blue-600 cursor-pointer h-1 bg-slate-200 rounded-lg appearance-none">
+                        <p class="text-[9px] text-slate-400 mt-1">Adjust contrast boundaries for lighter pencil marks or paper bleed-through.</p>
+                    </div>
+
+                    <button onclick="processScan()" id="btn-process" disabled class="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-semibold py-3 px-4 rounded-xl transition-all flex items-center justify-center text-sm shadow-sm">
+                        <i class="fa-solid fa-gears mr-2"></i> Run OMR Analysis
+                    </button>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex-grow flex flex-col min-h-[400px]">
+                    <h3 class="font-bold text-slate-800 mb-4 flex items-center"><i class="fa-solid fa-calculator text-emerald-500 mr-2"></i>Evaluation Result</h3>
+                    
+                    <div id="results-empty" class="flex-grow flex flex-col items-center justify-center text-slate-400 text-sm">
+                        <i class="fa-solid fa-circle-check text-4xl text-slate-200 mb-2"></i>
+                        <p class="font-medium text-slate-500">Awaiting scan analysis...</p>
+                    </div>
+
+                    <div id="results-container" class="hidden flex-grow flex flex-col space-y-4">
+                        
+                        <!-- Performance Header -->
+                        <div class="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-100 rounded-xl p-4 flex justify-between items-center">
+                            <div>
+                                <span class="text-xs font-semibold text-emerald-800 uppercase tracking-wide block">Raw Score</span>
+                                <span id="scanned-score" class="text-2xl font-bold text-emerald-900 leading-none">0/0</span>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-xs text-emerald-700 font-semibold block">Learner ID</span>
+                                <span id="scanned-learner-id" class="text-lg font-bold tracking-widest text-emerald-900 font-mono">---</span>
+                            </div>
+                        </div>
+
+                        <!-- Class Ledger Inserter Panel -->
+                        <div class="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-3">
+                            <span class="text-xs font-bold text-slate-700 uppercase tracking-wide block"><i class="fa-solid fa-circle-plus mr-1"></i>Commit Score to Ledger</span>
+                            
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Target Roster Class</label>
+                                <select id="record-class-select" class="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs outline-none focus:ring-1 focus:ring-blue-500">
+                                    <option value="">-- Choose Class --</option>
+                                </select>
+                            </div>
+                            
+                            <div class="grid grid-cols-3 gap-2">
+                                <div class="col-span-1">
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Student Name</label>
+                                    <input type="text" id="record-student-name" placeholder="Name" class="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs outline-none focus:ring-1 focus:ring-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Gender</label>
+                                    <select id="record-student-gender" class="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-xs outline-none focus:ring-1 focus:ring-blue-500">
+                                        <option value="N/A">N/A</option>
+                                        <option value="Male">Male</option>
+                                        <option value="Female">Female</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Absences</label>
+                                    <input type="number" id="record-student-absences" value="0" min="0" class="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs outline-none focus:ring-1 focus:ring-blue-500">
+                                </div>
+                            </div>
+
+                            <button onclick="commitScanRecord()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 rounded-lg text-xs transition-colors flex items-center justify-center gap-1 shadow-sm">
+                                <i class="fa-solid fa-circle-check"></i> Write Score to Roster
+                            </button>
+                        </div>
+
+                        <!-- Scanned Items Details Table -->
+                        <div class="overflow-y-auto pr-1 max-h-[220px] border border-slate-100 rounded-lg">
+                            <table class="w-full text-xs text-left text-slate-500">
+                                <thead class="text-[10px] text-slate-700 uppercase bg-slate-50 sticky top-0 font-bold">
+                                    <tr>
+                                        <th class="px-3 py-2">Item</th>
+                                        <th class="px-3 py-2">Detected</th>
+                                        <th class="px-3 py-2">Key</th>
+                                        <th class="px-3 py-2 text-right">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="results-table-body" class="divide-y divide-slate-100 bg-white">
+                                    <!-- Populated programmatically after evaluation -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 4: CLASSROOM LEDGERS & ANALYTICS -->
+        <div id="view-class" class="hidden space-y-6 animate-fadeIn">
+            <!-- Management Header Row -->
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-800 flex items-center">
+                        <i class="fa-solid fa-chalkboard-user text-blue-500 mr-2"></i>Classroom Ledgers & Remediation Engine
+                    </h2>
+                    <p class="text-sm text-slate-500 mt-1">Implement qualitative evaluation tracks and compliance criteria mapped directly to DepEd Order No. 015, s. 2026.</p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <div class="bg-slate-100 p-1.5 rounded-xl border border-slate-200 flex items-center gap-1.5">
+                        <span class="text-[10px] font-bold text-slate-500 uppercase px-2">Grading System:</span>
+                        <span class="bg-blue-600 text-white text-[10px] font-extrabold px-2.5 py-1 rounded-lg">Zero-Based (Raw Scores)</span>
+                    </div>
+                    <button onclick="toggleCreateClassModal(true)" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm">
+                        <i class="fa-solid fa-plus"></i> New Class Ledger
+                    </button>
+                </div>
+            </div>
+
+            <!-- Ledger Grid Content -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                
+                <!-- Left: Active Rosters List Sidebar -->
+                <div class="lg:col-span-4 space-y-4">
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+                        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wide mb-3">Active Roster Profiles</h3>
+                        <div id="class-cards-container" class="space-y-3">
+                            <!-- Dynamic roster elements loaded programmatically -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Analytics Summary Reports and Student Lists -->
+                <div class="lg:col-span-8 space-y-6">
+                    <div id="analytics-placeholder" class="bg-white rounded-2xl p-10 border border-slate-100 flex flex-col items-center justify-center text-slate-400 text-center shadow-inner">
+                        <i class="fa-solid fa-chart-column text-5xl text-slate-200 mb-3"></i>
+                        <h4 class="font-bold text-slate-700 text-base">No Selected Class Ledger</h4>
+                        <p class="text-xs text-slate-400 mt-1 font-medium">Select an active class profile on the left to review metrics and print instructional plans.</p>
+                    </div>
+
+                    <!-- Main Dashboard metrics view -->
+                    <div id="analytics-view-container" class="hidden space-y-6">
+                        
+                        <!-- Top line summary KPIs -->
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
+                                <div class="bg-blue-50 text-blue-600 p-3 rounded-xl"><i class="fa-solid fa-users text-lg"></i></div>
+                                <div>
+                                    <span class="text-xs text-slate-400 font-medium block">Roster Size</span>
+                                    <span id="stat-class-size" class="text-xl font-bold text-slate-800">0</span>
+                                </div>
+                            </div>
+                            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
+                                <div class="bg-emerald-50 text-emerald-600 p-3 rounded-xl"><i class="fa-solid fa-chart-line text-lg"></i></div>
+                                <div>
+                                    <span class="text-xs text-slate-400 font-medium block">Class Average</span>
+                                    <span id="stat-class-avg" class="text-xl font-bold text-slate-800">0%</span>
+                                </div>
+                            </div>
+                            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
+                                <div class="bg-purple-50 text-purple-600 p-3 rounded-xl"><i class="fa-solid fa-award text-lg"></i></div>
+                                <div>
+                                    <span class="text-xs text-slate-400 font-medium block">Highest Score</span>
+                                    <span id="stat-class-high" class="text-xl font-bold text-slate-800">0%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Critical Attendance Warnings -->
+                        <div id="attendance-critical-warnings" class="hidden space-y-3">
+                            <!-- Populated dynamically with alerts for students reaching >=12 absences -->
+                        </div>
+
+                        <!-- Class Roster Table View -->
+                        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+                            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+                                <h4 class="font-bold text-slate-800 text-sm flex items-center"><i class="fa-solid fa-table text-blue-500 mr-2"></i>Classroom Gradebook Ledger</h4>
+                                <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto text-[11px] font-bold">
+                                    <button onclick="downloadRosterCSVTemplate()" class="flex-1 sm:flex-none text-blue-600 hover:text-blue-800 flex items-center justify-center gap-1 border border-blue-200 px-3 py-1.5 bg-blue-50/50 rounded-lg">
+                                        <i class="fa-solid fa-download"></i> Sample CSV
+                                    </button>
+                                    <button onclick="triggerRosterCSVUpload()" class="flex-1 sm:flex-none bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1 border border-indigo-200">
+                                        <i class="fa-solid fa-file-import"></i> Import Roster CSV
+                                    </button>
+                                    <button onclick="exportClassToCSV()" class="flex-1 sm:flex-none bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1 border border-slate-200">
+                                        <i class="fa-solid fa-file-csv"></i> Export CSV Ledger
+                                    </button>
+                                    <input type="file" id="roster-csv-file" accept=".csv" class="hidden" onchange="handleRosterCSVUpload(event)">
+                                </div>
+                            </div>
+
+                            <div class="overflow-x-auto border border-slate-100 rounded-xl">
+                                <table class="w-full text-xs text-left text-slate-500">
+                                    <thead class="text-slate-700 bg-slate-50 border-b border-slate-100 uppercase text-[10px] font-bold">
+                                        <tr>
+                                            <th class="px-4 py-3">Learner ID</th>
+                                            <th class="px-4 py-3">Student Name</th>
+                                            <th class="px-4 py-3 text-center">Gender</th>
+                                            <th class="px-4 py-3 text-center">Absences</th>
+                                            <th class="px-4 py-3 text-center">Raw %</th>
+                                            <th class="px-4 py-3 text-center">Reported %</th>
+                                            <th class="px-4 py-3 text-center">Qualitative Band</th>
+                                            <th class="px-4 py-3 text-right">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="roster-table-body" class="divide-y divide-slate-100 bg-white">
+                                        <!-- student lists loaded dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Automated Instructional Response Plans (DO 15 s. 2026 compliant) -->
+                        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 space-y-4">
+                            <div class="flex justify-between items-center border-b border-slate-100 pb-4">
+                                <div>
+                                    <h4 class="font-bold text-slate-800 text-sm flex items-center"><i class="fa-solid fa-gears text-indigo-500 mr-2"></i>Automated Instructional Response Framework</h4>
+                                    <p class="text-xs text-slate-500 mt-1">Generates standardized, compliant response actions depending on calculated band distributions.</p>
+                                </div>
+                                <button onclick="downloadInstructionalActionPlan()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm">
+                                    <i class="fa-solid fa-file-arrow-down"></i> Export Response Plan
+                                </button>
+                            </div>
+
+                            <!-- Bands breakdown charts/cards -->
+                            <div class="grid grid-cols-1 md:grid-cols-5 gap-3" id="bands-distribution-cards">
+                                <!-- Loaded dynamically -->
+                            </div>
+
+                            <!-- Detailed Group level action plan cards -->
+                            <div class="space-y-4 pt-2" id="bands-action-plans-container">
+                                <!-- Mapped dynamically -->
+                            </div>
+                        </div>
+
+                        <!-- Competency Mastery Matrix Breakdown -->
+                        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 space-y-4">
+                            <div>
+                                <h4 class="font-bold text-slate-800 text-sm flex items-center"><i class="fa-solid fa-chart-bar text-rose-500 mr-2"></i>Competency-Based Item Mastery Analysis</h4>
+                                <p class="text-xs text-slate-500 mt-1">Tracks topic-level performance metrics mapped directly to the TOS blueprint. Competencies dropping below **75% mastery** are flagged.</p>
+                            </div>
+
+                            <div class="overflow-x-auto border border-slate-100 rounded-xl">
+                                <table class="w-full text-xs text-left text-slate-500">
+                                    <thead class="text-slate-700 bg-slate-50 border-b border-slate-100 uppercase text-[10px] font-bold">
+                                        <tr>
+                                            <th class="px-4 py-3">Learning Competency Mapped</th>
+                                            <th class="px-4 py-3 text-center w-24">Item Index</th>
+                                            <th class="px-4 py-3 text-center w-28">Avg. Mastery</th>
+                                            <th class="px-4 py-3 text-center w-36">Status</th>
+                                            <th class="px-4 py-3">Mandated Instructional Task Response</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="competency-mastery-table-body" class="divide-y divide-slate-100 bg-white">
+                                        <!-- Computed and generated dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Modal dialogue structures -->
+    <!-- Modal: Create Class Ledger -->
+    <div id="class-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fadeIn">
+        <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-slate-100 p-6">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-4 mb-4">
+                <h3 class="font-bold text-lg text-slate-800 flex items-center"><i class="fa-solid fa-circle-plus text-blue-500 mr-2"></i>New Classroom Ledger</h3>
+                <button onclick="toggleCreateClassModal(false)" class="text-slate-400 hover:text-slate-600 transition-colors"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Roster Class Section</label>
+                    <input type="text" id="modal-class-name" placeholder="E.g., Section 9 - Diamond" class="w-full px-3 py-2 border-slate-300 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Subject Title</label>
+                    <input type="text" id="modal-class-subject" placeholder="E.g., Mathematics 9" class="w-full px-3 py-2 border-slate-300 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Grade / Level Year</label>
+                    <input type="text" id="modal-class-grade" placeholder="E.g., Grade 9" class="w-full px-3 py-2 border-slate-300 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 border-t border-slate-100 pt-4 mt-6">
+                <button onclick="toggleCreateClassModal(false)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold transition-colors">Cancel</button>
+                <button onclick="createNewClass()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl text-xs font-bold transition-colors shadow-sm">Save Ledger</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden Cloud Synced Verification Modal -->
+    <div id="cloud-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fadeIn">
+        <div class="bg-white rounded-2xl max-w-sm w-full shadow-2xl border border-slate-100 p-6">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3 mb-4">
+                <h3 class="font-bold text-base text-slate-800 flex items-center"><i class="fa-solid fa-cloud-arrow-up text-blue-500 mr-2"></i>Workspace Access</h3>
+                <button onclick="toggleCloudModal(false)" class="text-slate-400 hover:text-slate-600 transition-colors"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="space-y-4">
+                <p class="text-xs text-slate-500 leading-relaxed">
+                    Activate cloud features and secure continuous backup directories with your verified deployment key credentials.
+                </p>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Teacher Access Credential Key</label>
+                    <input type="password" id="cloud-passkey" placeholder="Enter security token" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div id="cloud-modal-status" class="text-[10px] text-slate-400 italic"></div>
+            </div>
+            <div class="flex justify-end gap-2 border-t border-slate-100 pt-4 mt-6">
+                <button onclick="toggleCloudModal(false)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold">Cancel</button>
+                <button onclick="verifyAndActivateCloud()" id="btn-activate-cloud" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl text-xs font-bold shadow-sm flex items-center gap-1">
+                    <i class="fa-solid fa-circle-check"></i> Unlock Cloud Sync
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script Application Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // Configuration Parameters
+        const Config = {
+            width: 1131,       // Standard A4 Landscape target resolution width
+            height: 800,       // Standard A4 Landscape target resolution height
+            margin: 50,
+            markerSize: 40,
+            optionsMap: ['A', 'B', 'C', 'D', 'E'],
+            markerCenters: [
+                { x: 30, y: 30 },
+                { x: 1101, y: 30 },
+                { x: 1101, y: 770 },
+                { x: 30, y: 770 }
+            ]
+        };
+
+        const A5WarpConfig = {
+            width: 565,        // Normalized A5 Portrait target width mapping
+            height: 800,
+            offsetX: 0,
+            offsetY: 0
+        };
+
+        // Core Application States
+        let currentGeneratedBubbles = []; 
+        let tosMap = []; 
+        let tosStructure = [
+            { competency: "Determine measures of central tendency of ungrouped data.", easyPlacement: "1-2", averagePlacement: "3", difficultPlacement: "", answerKeys: "A,B,C" },
+            { competency: "Draw conclusions from statistical data using the measures of central tendency.", easyPlacement: "4-5", averagePlacement: "6", difficultPlacement: "", answerKeys: "D,A,B" },
+            { competency: "Model real-life situations using algebraic expressions.", easyPlacement: "7-8", averagePlacement: "9", difficultPlacement: "", answerKeys: "C,D,A" },
+            { competency: "Add and subtract simple monomials.", easyPlacement: "10-11", averagePlacement: "12", difficultPlacement: "", answerKeys: "B,B,C" },
+            { competency: "Multiply and divide simple monomials, leading to the laws of exponents.", easyPlacement: "13-14", averagePlacement: "15", difficultPlacement: "", answerKeys: "D,A,B" },
+            { competency: "Multiply simple monomials and binomials with simple binomials and multinomials, using the distributive property.", easyPlacement: "16-17", averagePlacement: "", difficultPlacement: "18", answerKeys: "A,C,D" },
+            { competency: "Use special product patterns to multiply binomials.", easyPlacement: "19-20", averagePlacement: "21", difficultPlacement: "", answerKeys: "A,B,C" },
+            { competency: "Completely factor different types of polynomials.", easyPlacement: "22", averagePlacement: "23-24", difficultPlacement: "25", answerKeys: "D,D,B,A" }
+        ];
+
+        let classes = []; 
+        let selectedClassId = null;
+
+        let uploadedImage = null;
+        let interactiveCanvas = null;
+        let interactiveCtx = null;
+        
+        let videoStream = null;
+        let isTrackingLive = false;
+        let stabilityCount = 0;
+        const STABILITY_REQUIRED = 3; 
+
+        let pins = [];
+        let activePinIndex = -1;
+        
+        let lastScanResults = null;
+        let evaluatedBubblesProof = []; 
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-omr-app-id';
+        let db = null;
+        let auth = null;
+        let userId = null;
+        let isFirebaseConnected = false;
+
+        async function initFirebaseAndCloud() {
+            if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+                try {
+                    const firebaseConfig = JSON.parse(__firebase_config);
+                    const app = initializeApp(firebaseConfig);
+                    db = getFirestore(app);
+                    auth = getAuth(app);
+
+                    // Auth first (Rule 3)
+                    let userCred;
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        userCred = await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        userCred = await signInAnonymously(auth);
+                    }
+                    
+                    if (userCred && userCred.user) {
+                        userId = userCred.user.uid;
+                        isFirebaseConnected = true;
+                        
+                        // Update cloud indicator UI
+                        const indicator = document.getElementById('cloud-status-indicator');
+                        const statusTxt = document.getElementById('cloud-status-text');
+                        if (indicator) {
+                            indicator.className = "w-1.5 h-1.5 rounded-full bg-emerald-500 scale-110";
+                        }
+                        if (statusTxt) {
+                            statusTxt.innerText = "Secured Backup";
+                            statusTxt.className = "text-[8px] font-bold text-emerald-600 uppercase tracking-wider";
+                        }
+                        
+                        await loadClassesFromCloud();
+                    }
+                } catch (err) {
+                    console.error("Secure DB Connection failure:", err);
+                    createToast("Secure Backup offline. Operating locally.");
+                }
+            }
+        }
+
+        async function saveClassToCloud(classObj) {
+            if (!isFirebaseConnected || !db || !userId) return;
+            try {
+                // Rule 1: Private Path: /artifacts/{appId}/users/{userId}/{collectionName}/{docId}
+                const docRef = doc(db, 'artifacts', appId, 'users', userId, 'classes', classObj.id);
+                await setDoc(docRef, {
+                    ...classObj,
+                    updatedAt: Date.now()
+                });
+            } catch (err) {
+                console.error("Cloud secure synchronization failed:", err);
+            }
+        }
+
+        async function deleteClassFromCloud(classId) {
+            if (!isFirebaseConnected || !db || !userId) return;
+            try {
+                const docRef = doc(db, 'artifacts', appId, 'users', userId, 'classes', classId);
+                await deleteDoc(docRef);
+            } catch (err) {
+                console.error("Cloud deletion sync failed:", err);
+            }
+        }
+
+        async function loadClassesFromCloud() {
+            if (!isFirebaseConnected || !db || !userId) return;
+            try {
+                // Rule 2: Simple Collection Query
+                const q = collection(db, 'artifacts', appId, 'users', userId, 'classes');
+                const querySnapshot = await getDocs(q);
+                let cloudClasses = [];
+                querySnapshot.forEach((doc) => {
+                    cloudClasses.push(doc.data());
+                });
+
+                if (cloudClasses.length > 0) {
+                    classes = cloudClasses;
+                    saveState(); // Sync local cache too
+                    renderClassroomDashboard();
+                    updateClassRegistrationDropdowns();
+                    createToast("Secure database records successfully synchronized.");
+                }
+            } catch (err) {
+                console.error("Cloud state retrieval failure:", err);
+            }
+        }
+
+        let localSecurityPin = localStorage.getItem('omr_security_pin') || null;
+        let securePinInput = "";
+        let isScreenLocked = false;
+
+        function checkWorkspaceLockState() {
+            if (localSecurityPin) {
+                lockWorkspaceScreen(true);
+            } else {
+                createToast("🔒 Security Alert: Setup your lock PIN to protect student grading logs.");
+            }
+        }
+
+        function lockWorkspaceScreen(isLocked) {
+            isScreenLocked = isLocked;
+            const overlay = document.getElementById('screen-lock-overlay');
+            if (!overlay) return;
+
+            if (isLocked) {
+                overlay.classList.remove('hidden');
+                securePinInput = "";
+                updatePinDots();
+                const titleEl = document.getElementById('lock-title');
+                const descEl = document.getElementById('lock-desc');
+                const lockIcon = document.getElementById('lock-icon-secure');
+                const statusMsg = document.getElementById('lock-status-msg');
+                if (statusMsg) statusMsg.innerText = "";
+                
+                if (localSecurityPin) {
+                    if (titleEl) titleEl.innerText = "Workspace Locked";
+                    if (descEl) descEl.innerText = "Enter PIN code to view student records";
+                    if (lockIcon) lockIcon.className = "fa-solid fa-lock text-2xl text-amber-500 animate-pulse";
+                } else {
+                    if (titleEl) titleEl.innerText = "Setup Security PIN";
+                    if (descEl) descEl.innerText = "Create a 4-digit screen lock for student data security";
+                    if (lockIcon) lockIcon.className = "fa-solid fa-shield-halved text-2xl text-blue-500";
+                }
+            } else {
+                overlay.classList.add('hidden');
+                createToast("Workspace access approved.");
+            }
+        }
+
+        function pressSecureKey(key) {
+            if (securePinInput.length < 4) {
+                securePinInput += key;
+                updatePinDots();
+                if (securePinInput.length === 4) {
+                    setTimeout(verifySecurePin, 250);
+                }
+            }
+        }
+
+        function clearSecureKey() {
+            securePinInput = "";
+            updatePinDots();
+        }
+
+        function deleteSecureKey() {
+            if (securePinInput.length > 0) {
+                securePinInput = securePinInput.slice(0, -1);
+                updatePinDots();
+            }
+        }
+
+        function updatePinDots() {
+            for (let i = 1; i <= 4; i++) {
+                const dot = document.getElementById(`pin-dot-${i}`);
+                if (dot) {
+                    if (i <= securePinInput.length) {
+                        dot.className = "w-3.5 h-3.5 rounded-full bg-blue-600 scale-110 transition-transform duration-100";
+                    } else {
+                        dot.className = "w-3.5 h-3.5 rounded-full bg-slate-200";
+                    }
+                }
+            }
+        }
+
+        function verifySecurePin() {
+            const statusMsg = document.getElementById('lock-status-msg');
+            if (localSecurityPin) {
+                if (securePinInput === localSecurityPin) {
+                    if (statusMsg) statusMsg.innerText = "";
+                    lockWorkspaceScreen(false);
+                } else {
+                    if (statusMsg) statusMsg.innerText = "Invalid security PIN. Please retry.";
+                    securePinInput = "";
+                    updatePinDots();
+                }
+            } else {
+                // Setup new PIN
+                localSecurityPin = securePinInput;
+                localStorage.setItem('omr_security_pin', localSecurityPin);
+                createToast("🔒 Security PIN established successfully.");
+                lockWorkspaceScreen(false);
+            }
+        }
+
+        function toggleLockScreenManual() {
+            if (isScreenLocked) return;
+            lockWorkspaceScreen(true);
+        }
+
+        const DepEdBands = {
+            advancing: {
+                name: "Advancing (Namumukod-tangi)",
+                range: [90, 100],
+                colorClass: "bg-emerald-100 text-emerald-800 border-emerald-200",
+                badgeClass: "bg-emerald-500 text-white",
+                response: "Enrichment & Leadership Mastery",
+                desc: "Consistently demonstrates cognitive tasks and understanding that meet or exceed standard requirements with high levels of independence, versatility, and analytical depth.",
+                actions: "Sustain enrichment tracks; assign collaborative peer mentor roles, exploratory transfer tasks, or self-directed research modules."
+            },
+            benchmarking: {
+                name: "Benchmarking (Napamamalas)",
+                range: [80, 89],
+                colorClass: "bg-blue-100 text-blue-800 border-blue-200",
+                badgeClass: "bg-blue-500 text-white",
+                response: "Deconstruct & Generalize",
+                desc: "Demonstrates expected core competencies and understanding independently with consistent accuracy.",
+                actions: "Deepen contextual tasks, incorporate complex procedural steps, and support learning transfer with increased cognitive autonomy."
+            },
+            connecting: {
+                name: "Connecting (Natutungo)",
+                range: [75, 79],
+                colorClass: "bg-teal-100 text-teal-800 border-teal-200",
+                badgeClass: "bg-teal-500 text-white",
+                response: "Guided Practice & Validation",
+                desc: "Shows sufficient compliance and capability with foundational expectations, showing potential for complexity under structural guidance.",
+                actions: "Implement structural scaffolding, utilize guided formative peer reviews, and construct confidence-building review drills."
+            },
+            developing: {
+                name: "Developing (Napauunlad)",
+                range: [65, 74],
+                colorClass: "bg-amber-100 text-amber-800 border-amber-200",
+                badgeClass: "bg-amber-500 text-white",
+                response: "Targeted Remediation tracks",
+                desc: "Partial core skill acquisition and inconsistent performance under key competencies; requires constant monitoring and scaffolded supports.",
+                actions: "Deploy intensive remediation sessions, simplify task complexities, and provide multiple formative retry cycles."
+            },
+            emerging: {
+                name: "Emerging (Nagsisimula)",
+                range: [0, 64],
+                colorClass: "bg-rose-100 text-rose-800 border-rose-200",
+                badgeClass: "bg-rose-500 text-white",
+                response: "Sustained Intervention Protocol (ARAL/SII)",
+                desc: "Does not yet demonstrate fundamental mastery of expected grade-level competencies; lacks critical baseline skills.",
+                actions: "Implement structured, documented, and sustained intervention routines (e.g., ARAL tutoring or targeted home-learning bundles)."
+            }
+        };
+
+        // State Preservations
+        function saveState() {
+            try {
+                localStorage.setItem('omr_tos_structure_do15', JSON.stringify(tosStructure));
+                localStorage.setItem('omr_tos_map_do15', JSON.stringify(tosMap));
+                localStorage.setItem('omr_classes_do15', JSON.stringify(classes));
+            } catch (err) {
+                console.error("Local storage sync error:", err);
+            }
+        }
+
+        function loadState() {
+            try {
+                const storedStructure = localStorage.getItem('omr_tos_structure_do15');
+                const storedTOS = localStorage.getItem('omr_tos_map_do15');
+                const storedClasses = localStorage.getItem('omr_classes_do15');
+                if (storedStructure) tosStructure = JSON.parse(storedStructure);
+                if (storedTOS) tosMap = JSON.parse(storedTOS);
+                if (storedClasses) classes = JSON.parse(storedClasses);
+            } catch (err) {
+                console.error("State restoration error:", err);
+            }
+        }
+
+        function switchTab(tab) {
+            const vGenerate = document.getElementById('view-generate');
+            const vTos = document.getElementById('view-tos');
+            const vScan = document.getElementById('view-scan');
+            const vClass = document.getElementById('view-class');
+
+            if (vGenerate) vGenerate.classList.toggle('hidden', tab !== 'generate');
+            if (vTos) vTos.classList.toggle('hidden', tab !== 'tos');
+            if (vScan) vScan.classList.toggle('hidden', tab !== 'scan');
+            if (vClass) vClass.classList.toggle('hidden', tab !== 'class');
+            
+            const tGen = document.getElementById('tab-generate');
+            const tTos = document.getElementById('tab-tos');
+            const tScan = document.getElementById('tab-scan');
+            const tClass = document.getElementById('tab-class');
+
+            if (tGen) tGen.className = tab === 'generate' ? 'tab-active px-3 py-5 h-full flex items-center gap-2 text-sm' : 'tab-inactive px-3 py-5 h-full flex items-center gap-2 text-sm hover:text-blue-500';
+            if (tTos) tTos.className = tab === 'tos' ? 'tab-active px-3 py-5 h-full flex items-center gap-2 text-sm' : 'tab-inactive px-3 py-5 h-full flex items-center gap-2 text-sm hover:text-blue-500';
+            if (tScan) tScan.className = tab === 'scan' ? 'tab-active px-3 py-5 h-full flex items-center gap-2 text-sm' : 'tab-inactive px-3 py-5 h-full flex items-center gap-2 text-sm hover:text-blue-500';
+            if (tClass) tClass.className = tab === 'class' ? 'tab-active px-3 py-5 h-full flex items-center gap-2 text-sm' : 'tab-inactive px-3 py-5 h-full flex items-center gap-2 text-sm hover:text-blue-500';
+            
+            if (tab !== 'scan') {
+                stopCamera();
+            }
+        }
+
+        // Compliance Grading Scales
+        function calculateReportedGrade(rawPercentage) {
+            return Math.round(rawPercentage);
+        }
+
+        function getQualitativeBand(grade) {
+            if (grade >= 90) return DepEdBands.advancing;
+            if (grade >= 80) return DepEdBands.benchmarking;
+            if (grade >= 75) return DepEdBands.connecting;
+            if (grade >= 65) return DepEdBands.developing;
+            return DepEdBands.emerging;
+        }
+
+        function collapseToRanges(nums) {
+            if (!nums || nums.length === 0) return "";
+            const uniqueNums = [...new Set(nums)].filter(n => n > 0).sort((a, b) => a - b);
+            if (uniqueNums.length === 0) return "";
+            const ranges = [];
+            let start = uniqueNums[0];
+            let end = uniqueNums[0];
+
+            for (let i = 1; i < uniqueNums.length; i++) {
+                if (uniqueNums[i] === end + 1) {
+                    end = uniqueNums[i];
+                } else {
+                    ranges.push(start === end ? `${start}` : `${start}-${end}`);
+                    start = uniqueNums[i];
+                    end = uniqueNums[i];
+                }
+            }
+            ranges.push(start === end ? `${start}` : `${start}-${end}`);
+            return ranges.join(", ");
+        }
+
+        function parsePlacementString(str) {
+            if (!str) return [];
+            const items = [];
+            const parts = str.split(',');
+            parts.forEach(part => {
+                const trimmed = part.trim();
+                if (!trimmed) return;
+                if (trimmed.includes('-')) {
+                    const rangeParts = trimmed.split('-');
+                    if (rangeParts.length === 2) {
+                        const start = parseInt(rangeParts[0].trim());
+                        const end = parseInt(rangeParts[1].trim());
+                        if (!isNaN(start) && !isNaN(end)) {
+                            const minVal = Math.min(start, end);
+                            const maxVal = Math.max(start, end);
+                            for (let i = minVal; i <= maxVal; i++) {
+                                if (i > 0) items.push(i);
+                            }
+                        }
+                    }
+                } else {
+                    const val = parseInt(trimmed);
+                    if (!isNaN(val) && val > 0) items.push(val);
+                }
+            });
+            return items;
+        }
+
+        function applyConditionalQuestions() {
+            const examTitleEl = document.getElementById('cfg-title');
+            const keyStageEl = document.getElementById('cfg-keystage');
+            const qInputEl = document.getElementById('cfg-questions');
+            
+            if (!examTitleEl || !keyStageEl || !qInputEl) return;
+
+            const examTitle = examTitleEl.value;
+            const keyStage = keyStageEl.value;
+            let totalQ = parseInt(qInputEl.value) || 25; 
+            
+            if ((examTitle === "Summative Test 1" || examTitle === "Summative Test 2") && keyStage === "Key Stage 3") {
+                totalQ = 25;
+            } else if ((examTitle === "Summative Test 1" || examTitle === "Summative Test 2") && keyStage === "Key Stage 4") {
+                totalQ = 30;
+            } else if (examTitle === "Term Examination" && keyStage === "Key Stage 3") {
+                totalQ = 50;
+            } else if (examTitle === "Term Examination" && keyStage === "Key Stage 4") {
+                totalQ = 60;
+            }
+            
+            qInputEl.value = totalQ;
+            syncTOSFromStructure();
+            handleGenerate();
+        }
+
+        function syncTOSFromStructure() {
+            const keysCache = {};
+            tosMap.forEach(item => {
+                keysCache[item.q] = item.key;
+            });
+
+            tosStructure.forEach(row => {
+                const easyItems = parsePlacementString(row.easyPlacement);
+                const averageItems = parsePlacementString(row.averagePlacement);
+                const difficultItems = parsePlacementString(row.difficultPlacement);
+                const allItems = [...easyItems, ...averageItems, ...difficultItems].sort((a,b) => a-b);
+                
+                if (row.answerKeys) {
+                    const keys = row.answerKeys.split(',').map(k => k.trim().toUpperCase());
+                    allItems.forEach((qNum, index) => {
+                        if (keys[index]) {
+                            keysCache[qNum] = keys[index];
+                        }
+                    });
+                }
+            });
+
+            const newTOSMap = [];
+            let maxQuestionIndex = 0;
+
+            tosStructure.forEach(row => {
+                const easyItems = parsePlacementString(row.easyPlacement);
+                const averageItems = parsePlacementString(row.averagePlacement);
+                const difficultItems = parsePlacementString(row.difficultPlacement);
+
+                const mapItems = (items, difficulty) => {
+                    items.forEach(qNum => {
+                        if (qNum > maxQuestionIndex) maxQuestionIndex = qNum;
+                        newTOSMap.push({
+                            q: qNum,
+                            key: keysCache[qNum] || 'A',
+                            difficulty: difficulty,
+                            competency: row.competency || 'General Topic'
+                        });
+                    });
+                };
+
+                mapItems(easyItems, 'Easy');
+                mapItems(averageItems, 'Average');
+                mapItems(difficultItems, 'Difficult');
+            });
+
+            const qInputEl = document.getElementById('cfg-questions');
+            let targetQ = qInputEl ? parseInt(qInputEl.value) : 25;
+            if (isNaN(targetQ)) {
+                targetQ = maxQuestionIndex || 25;
+            }
+
+            if (targetQ > maxQuestionIndex) {
+                for (let qNum = 1; qNum <= targetQ; qNum++) {
+                    if (!newTOSMap.some(item => item.q === qNum)) {
+                        newTOSMap.push({
+                            q: qNum,
+                            key: keysCache[qNum] || 'A',
+                            difficulty: 'Average',
+                            competency: 'General / Unassigned Topic'
+                        });
+                    }
+                }
+            } else if (maxQuestionIndex > targetQ) {
+                targetQ = maxQuestionIndex;
+                if (qInputEl) qInputEl.value = targetQ;
+            }
+
+            newTOSMap.sort((a,b) => a.q - b.q);
+            tosMap = newTOSMap;
+
+            renderTOSBlueprintUI();
+            renderTOSAnswerMatrixUI();
+            updateClassRegistrationDropdowns();
+        }
+
+        function renderTOSBlueprintUI() {
+            const tbody = document.getElementById('tos-blueprint-body');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            tosStructure.forEach((row, index) => {
+                const easyItems = parsePlacementString(row.easyPlacement);
+                const avgItems = parsePlacementString(row.averagePlacement);
+                const diffItems = parsePlacementString(row.difficultPlacement);
+                const allItems = [...easyItems, ...avgItems, ...diffItems].sort((a,b) => a-b);
+                const consolidatedPlacement = collapseToRanges(allItems);
+                const total = allItems.length;
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50/50 transition-colors";
+                tr.innerHTML = `
+                    <td class="px-4 py-2">
+                        <input type="text" id="comp-input-${index}" value="${escapeHtml(row.competency)}" class="w-full bg-transparent border-0 border-b border-dashed border-slate-200 focus:border-blue-500 focus:ring-0 text-slate-800 font-semibold outline-none py-1 text-xs">
+                    </td>
+                    <td class="px-4 py-2 text-center text-slate-600 font-mono text-xs">
+                        ${consolidatedPlacement || "-"}
+                    </td>
+                    <td class="px-4 py-2">
+                        <input type="text" id="easy-input-${index}" value="${escapeHtml(row.easyPlacement)}" class="w-full bg-transparent border-0 border-b border-dashed border-slate-200 focus:border-blue-500 focus:ring-0 text-green-700 font-mono py-1 text-xs outline-none" placeholder="e.g. 1-3">
+                    </td>
+                    <td class="px-4 py-2">
+                        <input type="text" id="avg-input-${index}" value="${escapeHtml(row.averagePlacement)}" class="w-full bg-transparent border-0 border-b border-dashed border-slate-200 focus:border-blue-500 focus:ring-0 text-blue-700 font-mono py-1 text-xs outline-none" placeholder="e.g. 4-5">
+                    </td>
+                    <td class="px-4 py-2">
+                        <input type="text" id="diff-input-${index}" value="${escapeHtml(row.difficultPlacement)}" class="w-full bg-transparent border-0 border-b border-dashed border-slate-200 focus:border-blue-500 focus:ring-0 text-red-700 font-mono py-1 text-xs outline-none" placeholder="e.g. 6">
+                    </td>
+                    <td class="px-4 py-2">
+                        <input type="text" id="keys-input-${index}" value="${escapeHtml(row.answerKeys || '')}" class="w-full bg-transparent border-0 border-b border-dashed border-slate-200 focus:border-blue-500 focus:ring-0 text-indigo-700 font-mono py-1 text-xs outline-none" placeholder="e.g. A,B,C">
+                    </td>
+                    <td class="px-3 py-2 text-center text-slate-700 font-bold">
+                        ${total}
+                    </td>
+                    <td class="px-3 py-2 text-right">
+                        <button id="btn-remove-blueprint-${index}" class="text-slate-300 hover:text-red-500 transition-colors"><i class="fa-solid fa-trash-can"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+
+                document.getElementById(`comp-input-${index}`).addEventListener('change', (e) => {
+                    updateBlueprintRow(index, 'competency', e.target.value);
+                });
+                document.getElementById(`easy-input-${index}`).addEventListener('change', (e) => {
+                    updateBlueprintRow(index, 'easyPlacement', e.target.value);
+                    syncTOSFromStructure();
+                });
+                document.getElementById(`avg-input-${index}`).addEventListener('change', (e) => {
+                    updateBlueprintRow(index, 'averagePlacement', e.target.value);
+                    syncTOSFromStructure();
+                });
+                document.getElementById(`diff-input-${index}`).addEventListener('change', (e) => {
+                    updateBlueprintRow(index, 'difficultPlacement', e.target.value);
+                    syncTOSFromStructure();
+                });
+                document.getElementById(`keys-input-${index}`).addEventListener('change', (e) => {
+                    updateBlueprintRow(index, 'answerKeys', e.target.value);
+                    syncTOSFromStructure();
+                });
+                document.getElementById(`btn-remove-blueprint-${index}`).addEventListener('click', () => {
+                    removeBlueprintRow(index);
+                    syncTOSFromStructure();
+                });
+            });
+        }
+
+        function renderTOSAnswerMatrixUI() {
+            const tbody = document.getElementById('tos-answer-matrix-body');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            
+            const numOptionsEl = document.getElementById('cfg-options');
+            const numOptions = numOptionsEl ? (parseInt(numOptionsEl.value) || 4) : 4;
+
+            tosMap.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition-colors";
+
+                let optionsHTML = '<div class="flex gap-1">';
+                for (let o = 0; o < numOptions; o++) {
+                    const letter = Config.optionsMap[o];
+                    const isActive = item.key === letter;
+                    optionsHTML += `
+                        <button id="btn-key-${item.q}-${letter}" class="w-6 h-6 rounded-full text-[10px] font-bold border transition-all flex items-center justify-center ${
+                            isActive 
+                            ? 'bg-amber-500 border-amber-600 text-white shadow-sm' 
+                            : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-100'
+                        }">
+                            ${letter}
+                        </button>
+                    `;
+                }
+                optionsHTML += '</div>';
+
+                const diffColors = {
+                    'Easy': 'bg-green-50 text-green-700 border-green-100',
+                    'Average': 'bg-blue-50 text-blue-700 border-blue-100',
+                    'Difficult': 'bg-red-50 text-red-700 border-red-100'
+                };
+                const badgeClass = diffColors[item.difficulty] || 'bg-slate-50 text-slate-700 border-slate-100';
+
+                tr.innerHTML = `
+                    <td class="px-3 py-1.5 font-semibold text-slate-700">
+                        Q ${item.q}
+                        <span class="block text-[8px] tracking-wide uppercase font-bold text-slate-400 truncate max-w-[50px]">${escapeHtml(item.competency)}</span>
+                    </td>
+                    <td class="px-3 py-1.5 flex items-center justify-between gap-2">
+                        ${optionsHTML}
+                        <span class="border rounded px-1.5 py-0.5 text-[8px] font-bold ${badgeClass}">${item.difficulty}</span>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+
+                for (let o = 0; o < numOptions; o++) {
+                    const letter = Config.optionsMap[o];
+                    document.getElementById(`btn-key-${item.q}-${letter}`).addEventListener('click', () => {
+                        updateAnswerMatrixKey(item.q, letter);
+                    });
+                }
+            });
+        }
+
+        function updateBlueprintRow(index, key, val) {
+            if (tosStructure[index]) {
+                tosStructure[index][key] = val;
+            }
+        }
+
+        function addNewTOSRow() {
+            tosStructure.push({
+                competency: "New Competency Objective",
+                easyPlacement: "",
+                averagePlacement: "",
+                difficultPlacement: "",
+                answerKeys: ""
+            });
+            renderTOSBlueprintUI();
+        }
+
+        function removeBlueprintRow(index) {
+            tosStructure.splice(index, 1);
+            renderTOSBlueprintUI();
+        }
+
+        function updateAnswerMatrixKey(qNum, keyVal) {
+            const item = tosMap.find(i => i.q === qNum);
+            if (item) {
+                item.key = keyVal;
+                renderTOSAnswerMatrixUI();
+            }
+        }
+
+        function applyTOSBlueprint() {
+            syncTOSFromStructure();
+            saveState();
+            createToast("TOS and Answer Keys applied and verified.");
+            handleGenerate(); 
+        }
+
+        function handleGenerate() {
+            const qInputEl = document.getElementById('cfg-questions');
+            const optInputEl = document.getElementById('cfg-options');
+
+            const numQuestions = qInputEl ? Math.min(100, parseInt(qInputEl.value) || 25) : 25;
+            const numOptions = optInputEl ? (parseInt(optInputEl.value) || 4) : 4;
+
+            const canvas = document.getElementById('generator-canvas');
+            if (!canvas) return;
+            canvas.width = Config.width;
+            canvas.height = Config.height;
+            const ctx = canvas.getContext('2d');
+
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            currentGeneratedBubbles = [];
+
+            drawA5SubSheet(ctx, 0, numQuestions, numOptions, true);
+            drawA5SubSheet(ctx, 566, numQuestions, numOptions, false);
+
+            ctx.strokeStyle = "#94a3b8"; 
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([8, 8]);
+            ctx.beginPath();
+            ctx.moveTo(565, 0);
+            ctx.lineTo(565, 800);
+            ctx.stroke();
+            ctx.setLineDash([]); 
+
+            ctx.fillStyle = "#64748b";
+            ctx.font = "14px 'Font Awesome 6 Free'";
+            ctx.textAlign = "center";
+            ctx.save();
+            ctx.translate(560, 400);
+            ctx.rotate(-Math.PI / 2);
+            ctx.fillText(" Cut vertically along dashed lines ------------------------------", 0, 0);
+            ctx.restore();
+
+            const dataUrl = canvas.toDataURL('image/png');
+            const previewImg = document.getElementById('generator-preview');
+            if (previewImg) previewImg.src = dataUrl;
+        }
+
+        function drawA5SubSheet(ctx, offsetX, numQuestions, numOptions, saveBubbles) {
+            const examTitleEl = document.getElementById('cfg-title');
+            const subjectEl = document.getElementById('cfg-subject');
+            const termEl = document.getElementById('cfg-term');
+            const keystageEl = document.getElementById('cfg-keystage');
+
+            const examTitle = examTitleEl ? examTitleEl.value : "Scoresheet";
+            const subject = subjectEl ? subjectEl.value : "General Subject";
+            const term = termEl ? termEl.value : "Term";
+            const keyStage = keystageEl ? keystageEl.value : "Key Stage";
+
+            ctx.fillStyle = "#000000";
+            const a5MarkerCenters = [
+                { x: 30, y: 30 },         
+                { x: 535, y: 30 },        
+                { x: 535, y: 770 },       
+                { x: 30, y: 770 }         
+            ];
+
+            a5MarkerCenters.forEach(center => {
+                const markerX = offsetX + center.x - 15;
+                const markerY = center.y - 15;
+                ctx.fillRect(markerX, markerY, 30, 30);
+            });
+
+            ctx.fillStyle = "#0f172a";
+            ctx.font = "bold 18px Inter, sans-serif";
+            ctx.textAlign = "left";
+            ctx.fillText(`${subject} - ${examTitle}`, offsetX + 50, 65);
+            
+            ctx.font = "normal 11px Inter, sans-serif";
+            ctx.fillStyle = "#475569";
+            ctx.fillText(`${term} | ${keyStage} | Items: ${numQuestions}`, offsetX + 50, 85);
+            
+            ctx.font = "italic 9.5px Inter, sans-serif";
+            ctx.fillStyle = "#475569";
+            ctx.fillText("Fill bubbles fully with dark ink. Avoid folding the sheet.", offsetX + 50, 105);
+
+            ctx.textAlign = "left";
+            ctx.fillStyle = "#0f172a";
+            ctx.font = "bold 11px Inter, sans-serif";
+            ctx.fillText("NAME: _________________________________", offsetX + 50, 135);
+            ctx.fillText("DATE: _________________________________", offsetX + 50, 168);
+            ctx.fillText("SECTION: _____________________________", offsetX + 50, 201);
+
+            // 4-Digit LRN Coordinates block
+            const idStartX = 365;       
+            const idStartY = 80;         
+            const idCols = 4;           
+            const idBubbleRadius = 8.5;  
+            const idColSpacing = 28;     
+            const idRowSpacing = 20;     
+
+            ctx.fillStyle = "#0f172a";
+            ctx.font = "bold 11px Inter, sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText("LEARNER ID", offsetX + idStartX + 42, idStartY - 15);
+
+            ctx.lineWidth = 1.3;
+            ctx.strokeStyle = "#1e293b";
+
+            for (let c = 0; c < idCols; c++) {
+                const colX = idStartX + (c * idColSpacing);
+                for (let r = 0; r <= 9; r++) {
+                    const rowY = idStartY + (r * idRowSpacing);
+
+                    ctx.beginPath();
+                    ctx.arc(offsetX + colX, rowY, idBubbleRadius, 0, Math.PI * 2);
+                    ctx.stroke();
+
+                    ctx.fillStyle = "#334155";
+                    ctx.font = "bold 11px Inter, sans-serif";
+                    ctx.textAlign = "center";
+                    ctx.fillText(r.toString(), offsetX + colX, rowY + 3.5);
+
+                    if (saveBubbles) {
+                        currentGeneratedBubbles.push({
+                            type: 'id',
+                            col: c,
+                            val: r.toString(),
+                            x: colX, 
+                            y: rowY,
+                            r: idBubbleRadius
+                        });
+                    }
+                }
+            }
+
+            let bubbleRadius = 11.0; 
+            let rowHeight = 26;
+            let optSpacing = 26;
+            let textYOffset = 4.0;
+            let qFontSize = "bold 10px Inter, sans-serif";
+            let optFontSize = "bold 11px Inter, sans-serif";
+            let columns = 4;
+            let qNumOffset = bubbleRadius + 11; 
+
+            if (numQuestions <= 25) {
+                columns = 2;
+                bubbleRadius = 9.5;    
+                rowHeight = 32;        
+                optSpacing = 30;       
+                textYOffset = 3.5;
+                qNumOffset = bubbleRadius + 11; 
+            } else if (numQuestions <= 50) {
+                columns = 3;
+                bubbleRadius = 8.0;    
+                rowHeight = 25;        
+                optSpacing = 24;       
+                textYOffset = 3.0;
+                qFontSize = "bold 9px Inter, sans-serif";
+                optFontSize = "bold 9px Inter, sans-serif";
+                qNumOffset = bubbleRadius + 10; 
+            } else if (numQuestions <= 75) { 
+                columns = 4;
+                bubbleRadius = 7.0;    
+                rowHeight = 22;        
+                optSpacing = 20;       
+                textYOffset = 2.5;
+                qFontSize = "bold 8px Inter, sans-serif";
+                optFontSize = "bold 8px Inter, sans-serif";
+                qNumOffset = bubbleRadius + 9;  
+            } else { 
+                columns = 5;
+                bubbleRadius = 6.0;    
+                rowHeight = 18;        
+                optSpacing = 16;       
+                textYOffset = 2.5;
+                qFontSize = "bold 7.5px Inter, sans-serif";
+                optFontSize = "bold 7.5px Inter, sans-serif";
+                qNumOffset = bubbleRadius + 8;  
+            }
+
+            const rowsPerColumn = Math.ceil(numQuestions / columns);
+            const startY = 320; 
+            const colWidth = 480 / columns; 
+
+            for (let i = 0; i < numQuestions; i++) {
+                const colIndex = Math.floor(i / rowsPerColumn);
+                const rowIndex = i % rowsPerColumn;
+                
+                const baseX = 40 + (colIndex * colWidth) + 25; 
+                const baseY = startY + (rowIndex * rowHeight);
+
+                ctx.fillStyle = "#0f172a";
+                ctx.textAlign = "right";
+                ctx.font = qFontSize;
+                ctx.fillText(`${i + 1}`, offsetX + baseX - qNumOffset, baseY + textYOffset);
+
+                for (let j = 0; j < numOptions; j++) {
+                    const optX = baseX + (j * optSpacing);
+                    const optY = baseY;
+
+                    ctx.beginPath();
+                    ctx.arc(offsetX + optX, optY, bubbleRadius, 0, Math.PI * 2);
+                    ctx.stroke();
+
+                    ctx.fillStyle = "#334155";
+                    ctx.textAlign = "center";
+                    ctx.font = optFontSize;
+                    ctx.fillText(Config.optionsMap[j], offsetX + optX, optY + textYOffset);
+
+                    if (saveBubbles) {
+                        currentGeneratedBubbles.push({
+                            type: 'question',
+                            q: i + 1,
+                            opt: Config.optionsMap[j],
+                            x: optX, 
+                            y: optY,
+                            r: bubbleRadius
+                        });
+                    }
+                }
+            }
+        }
+
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    uploadedImage = img;
+                    evaluatedBubblesProof = []; 
+                    initInteractiveScanner();
+                }
+                img.src = e.target.result;
+            }
+            reader.readAsDataURL(file);
+        }
+
+        async function startCamera() {
+            const container = document.getElementById('camera-container');
+            const video = document.getElementById('camera-video');
+            if (!container || !video) return;
+            
+            try {
+                const constraints = {
+                    video: { 
+                        facingMode: 'environment',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    }
+                };
+                
+                videoStream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = videoStream;
+                await video.play().catch(e => console.log("Video track load deferred", e));
+                
+                container.classList.remove('hidden');
+                container.classList.add('flex');
+                
+                const btnProcess = document.getElementById('btn-process');
+                if (btnProcess) btnProcess.disabled = true;
+
+                isTrackingLive = true;
+                stabilityCount = 0;
+                requestAnimationFrame(trackLiveFrame);
+            } catch (err) {
+                console.error("Camera interface load error:", err);
+                createToast("Could not access camera resources. Please upload sheets directly.");
+            }
+        }
+
+        function stopCamera() {
+            isTrackingLive = false;
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+                videoStream = null;
+            }
+            const container = document.getElementById('camera-container');
+            if (container) {
+                container.classList.add('hidden');
+                container.classList.remove('flex');
+            }
+            
+            const placeholder = document.getElementById('upload-placeholder');
+            const interactiveCont = document.getElementById('interactive-container');
+            const btnProcess = document.getElementById('btn-process');
+
+            if (!uploadedImage) {
+               if (placeholder) placeholder.classList.remove('hidden');
+            } else {
+               if (interactiveCont) interactiveCont.classList.remove('hidden');
+               if (btnProcess) btnProcess.disabled = false;
+            }
+        }
+
+        function trackLiveFrame() {
+            if (!isTrackingLive || !videoStream) return;
+
+            const video = document.getElementById('camera-video');
+            const hudCanvas = document.getElementById('camera-hud-canvas');
+            const hudStatus = document.getElementById('camera-hud-status');
+
+            if (!video || video.paused || video.ended || !hudCanvas) {
+                requestAnimationFrame(trackLiveFrame);
+                return;
+            }
+
+            if (hudCanvas.width !== video.clientWidth || hudCanvas.height !== video.clientHeight) {
+                hudCanvas.width = video.clientWidth;
+                hudCanvas.height = video.clientHeight;
+            }
+
+            const hw = hudCanvas.width;
+            const hh = hudCanvas.height;
+            const hudCtx = hudCanvas.getContext('2d');
+            hudCtx.clearRect(0, 0, hw, hh);
+
+            const tempCanvas = document.createElement('canvas');
+            const scanW = 480; 
+            const scanH = Math.round((video.videoHeight / video.videoWidth) * scanW);
+            tempCanvas.width = scanW;
+            tempCanvas.height = scanH;
+
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.drawImage(video, 0, 0, scanW, scanH);
+
+            const detection = detectCornersInFrameData(tempCtx, scanW, scanH);
+            hudCtx.lineWidth = 2;
+
+            hudCtx.strokeStyle = "rgba(255, 255, 255, 0.25)";
+            hudCtx.setLineDash([5, 5]);
+            hudCtx.strokeRect(hw * 0.08, hh * 0.08, hw * 0.84, hh * 0.84);
+            hudCtx.setLineDash([]);
+
+            const mappedPoints = [];
+            let detectedCount = 0;
+
+            if (detection) {
+                const mapToHud = (pt) => {
+                    const u = pt.x / scanW;
+                    const v = pt.y / scanH;
+                    return { x: u * hw, y: v * hh };
+                };
+
+                const corners = ['TL', 'TR', 'BR', 'BL'];
+                corners.forEach((corner, i) => {
+                    const foundPt = detection[corner];
+                    if (foundPt) {
+                        detectedCount++;
+                        const hudPt = mapToHud(foundPt);
+                        mappedPoints[i] = hudPt;
+
+                        hudCtx.beginPath();
+                        hudCtx.arc(hudPt.x, hudPt.y, 22, 0, Math.PI * 2);
+                        hudCtx.strokeStyle = "#10b981"; 
+                        hudCtx.fillStyle = "rgba(16, 185, 129, 0.15)";
+                        hudCtx.fill();
+                        hudCtx.stroke();
+                    } else {
+                        const fallbackU = i === 0 || i === 3 ? 0.08 : 0.92;
+                        const fallbackV = i === 0 || i === 1 ? 0.08 : 0.92;
+                        hudCtx.beginPath();
+                        hudCtx.arc(fallbackU * hw, fallbackV * hh, 25, 0, Math.PI * 2);
+                        hudCtx.strokeStyle = "rgba(239, 68, 68, 0.4)"; 
+                        hudCtx.stroke();
+                    }
+                });
+            }
+
+            if (detectedCount === 4) {
+                stabilityCount++;
+                if (hudStatus) {
+                    hudStatus.innerText = `LOCKED! Hold Steady ${stabilityCount}/${STABILITY_REQUIRED}...`;
+                }
+
+                hudCtx.strokeStyle = "#10b981";
+                hudCtx.lineWidth = 3;
+                hudCtx.beginPath();
+                hudCtx.moveTo(mappedPoints[0].x, mappedPoints[0].y);
+                hudCtx.lineTo(mappedPoints[1].x, mappedPoints[1].y);
+                hudCtx.lineTo(mappedPoints[2].x, mappedPoints[2].y);
+                hudCtx.lineTo(mappedPoints[3].x, mappedPoints[3].y);
+                hudCtx.closePath();
+                hudCtx.stroke();
+
+                if (stabilityCount >= STABILITY_REQUIRED) {
+                    isTrackingLive = false;
+                    triggerAutoShutterCapture(video, detection);
+                    return;
+                }
+            } else {
+                stabilityCount = 0;
+                if (hudStatus) {
+                    hudStatus.innerText = `Align paper corners (${detectedCount}/4)`;
+                }
+            }
+
+            setTimeout(() => {
+                requestAnimationFrame(trackLiveFrame);
+            }, 80); 
+        }
+
+        function triggerAutoShutterCapture(video, rawDetection) {
+            const flash = document.getElementById('camera-flash');
+            if (flash) {
+                flash.style.opacity = '1';
+                setTimeout(() => { flash.style.opacity = '0'; }, 150);
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth || 1280;
+            canvas.height = video.videoHeight || 720;
+            
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            const img = new Image();
+            img.onload = function() {
+                uploadedImage = img;
+                stopCamera();
+                initInteractiveScanner();
+
+                pins[0] = { u: rawDetection.TL.x / 480, v: rawDetection.TL.y / (480 * (video.videoHeight / video.videoWidth)) };
+                pins[1] = { u: rawDetection.TR.x / 480, v: rawDetection.TR.y / (480 * (video.videoHeight / video.videoWidth)) };
+                pins[2] = { u: rawDetection.BR.x / 480, v: rawDetection.BR.y / (480 * (video.videoHeight / video.videoWidth)) };
+                pins[3] = { u: rawDetection.BL.x / 480, v: rawDetection.BL.y / (480 * (video.videoHeight / video.videoWidth)) };
+
+                drawInteractiveState();
+                createToast("OMR target boundaries established.");
+
+                setTimeout(() => {
+                    processScan();
+                }, 100);
+            };
+            img.src = canvas.toDataURL('image/jpeg', 0.95);
+        }
+
+        function detectCornersInFrameData(ctx, procWidth, procHeight) {
+            const imgData = ctx.getImageData(0, 0, procWidth, procHeight);
+            const pixels = imgData.data;
+
+            const searchW = Math.round(procWidth * 0.35);
+            const searchH = Math.round(procHeight * 0.35);
+
+            const zones = [
+                { name: 'TL', xStart: 0, xEnd: searchW, yStart: 0, yEnd: searchH, targetPin: 0 },
+                { name: 'TR', xStart: procWidth - searchW, xEnd: procWidth, yStart: 0, yEnd: searchH, targetPin: 1 },
+                { name: 'BR', xStart: procWidth - searchW, xEnd: procWidth, yStart: procHeight - searchH, yEnd: procHeight, targetPin: 2 },
+                { name: 'BL', xStart: 0, xEnd: searchW, yStart: procHeight - searchH, yEnd: procHeight, targetPin: 3 }
+            ];
+
+            const result = { TL: null, TR: null, BR: null, BL: null };
+
+            zones.forEach(zone => {
+                let visited = new Uint8Array(procWidth * procHeight);
+                let candidates = [];
+
+                for (let y = zone.yStart; y < zone.yEnd; y += 2) {
+                    for (let x = zone.xStart; x < zone.xEnd; x += 2) {
+                        const idx = (y * procWidth + x) * 4;
+                        const r = pixels[idx];
+                        const g = pixels[idx + 1];
+                        const b = pixels[idx + 2];
+                        
+                        const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+                        const vIdx = y * procWidth + x;
+
+                        if (gray < 85 && visited[vIdx] === 0) {
+                            let queue = [];
+                            let xMin = x, xMax = x, yMin = y, yMax = y;
+                            let blobPixels = 0;
+
+                            queue.push({ px: x, py: y });
+                            visited[vIdx] = 1;
+
+                            while (queue.length > 0) {
+                                const curr = queue.shift();
+                                blobPixels++;
+                                
+                                if (curr.px < xMin) xMin = curr.px;
+                                if (curr.px > xMax) xMax = curr.px;
+                                if (curr.py < yMin) yMin = curr.py;
+                                if (curr.py > yMax) yMax = curr.py;
+
+                                const neighbors = [
+                                    { nx: curr.px + 2, ny: curr.py },
+                                    { nx: curr.px - 2, ny: curr.py },
+                                    { nx: curr.px, ny: curr.py + 2 },
+                                    { nx: curr.px, ny: curr.py - 2 }
+                                ];
+
+                                neighbors.forEach(n => {
+                                    if (n.nx >= zone.xStart && n.nx < zone.xEnd && n.ny >= zone.yStart && n.ny < zone.yEnd) {
+                                        const nVIdx = n.ny * procWidth + n.nx;
+                                        if (visited[nVIdx] === 0) {
+                                            const nIdx = nVIdx * 4;
+                                            const nGray = 0.299 * pixels[nIdx] + 0.587 * pixels[nIdx+1] + 0.114 * pixels[nIdx+2];
+                                            if (nGray < 85) {
+                                                visited[nVIdx] = 1;
+                                                queue.push({ px: n.nx, py: n.ny });
+                                            }
+                                        }
+                                    }
+                                });
+                            }
+
+                            const width = xMax - xMin + 1;
+                            const height = yMax - yMin + 1;
+                            const aspect = width / height;
+
+                            if (width >= 8 && width <= 65 && height >= 8 && height <= 65) {
+                                if (aspect >= 0.65 && aspect <= 1.55) {
+                                    const density = blobPixels / ((width * height) / 4);
+                                    if (density > 0.45) {
+                                        candidates.push({
+                                            cx: xMin + width / 2,
+                                            cy: yMin + height / 2,
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (candidates.length > 0) {
+                    let targetX = (zone.name.includes('R')) ? procWidth : 0;
+                    let targetY = (zone.name.includes('B')) ? procHeight : 0;
+
+                    candidates.sort((a, b) => {
+                        const distA = Math.hypot(a.cx - targetX, a.cy - targetY);
+                        const distB = Math.hypot(b.cx - targetX, b.cy - targetY);
+                        return distA - distB;
+                    });
+
+                    result[zone.name] = { x: candidates[0].cx, y: candidates[0].cy };
+                }
+            });
+
+            if (result.TL && result.TR && result.BR && result.BL) {
+                return result;
+            }
+            return null; 
+        }
+
+        function capturePhoto() {
+            const video = document.getElementById('camera-video');
+            if (!video || !videoStream) return;
+
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth || 1280;
+            canvas.height = video.videoHeight || 720;
+            
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            const img = new Image();
+            img.onload = function() {
+                uploadedImage = img;
+                evaluatedBubblesProof = []; 
+                stopCamera();
+                initInteractiveScanner();
+                createToast("Photo snap loaded for perspective warp.");
+            };
+            img.src = canvas.toDataURL('image/jpeg', 0.95);
+        }
+
+        function initInteractiveScanner() {
+            const placeholder = document.getElementById('upload-placeholder');
+            if (placeholder) placeholder.classList.add('hidden');
+            const container = document.getElementById('interactive-container');
+            if (container) container.classList.remove('hidden');
+            const btnProcess = document.getElementById('btn-process');
+            if (btnProcess) btnProcess.disabled = false;
+
+            if (!interactiveCanvas) {
+                setupInteractiveCanvas();
+            }
+
+            const MAX_DISPLAY_WIDTH = 800;
+            const scale = Math.min(1, MAX_DISPLAY_WIDTH / uploadedImage.width);
+            
+            if (interactiveCanvas) {
+                interactiveCanvas.width = uploadedImage.width * scale;
+                interactiveCanvas.height = uploadedImage.height * scale;
+            }
+
+            resetCalibrationPins(true); 
+            
+            setTimeout(() => {
+                autoDetectCorners(true);
+            }, 100);
+        }
+
+        function resetCalibrationPins(silent = false) {
+            pins = [
+                { u: 30 / 565, v: 30 / 800 },     
+                { u: 535 / 565, v: 30 / 800 },    
+                { u: 535 / 565, v: 770 / 800 },   
+                { u: 30 / 565, v: 770 / 800 }     
+            ];
+            
+            if (uploadedImage) {
+                drawInteractiveState();
+                if (!silent) {
+                    createToast("Pins restored to corner anchors.");
+                }
+            }
+        }
+
+        function autoDetectCorners(silent = false) {
+            if (!uploadedImage) {
+                if (!silent) createToast("No sheet loaded for calibration.");
+                return;
+            }
+
+            const procCanvas = document.createElement('canvas');
+            const procWidth = 565;
+            const procHeight = Math.round((uploadedImage.height / uploadedImage.width) * procWidth);
+            procCanvas.width = procWidth;
+            procCanvas.height = procHeight;
+            
+            const procCtx = procCanvas.getContext('2d', { willReadFrequently: true });
+            procCtx.drawImage(uploadedImage, 0, 0, procWidth, procHeight);
+            
+            const imgData = procCtx.getImageData(0, 0, procWidth, procHeight);
+            const pixels = imgData.data;
+
+            const searchW = Math.round(procWidth * 0.35);
+            const searchH = Math.round(procHeight * 0.35);
+
+            const zones = [
+                { name: 'TL', xStart: 0, xEnd: searchW, yStart: 0, yEnd: searchH, targetPin: 0 },
+                { name: 'TR', xStart: procWidth - searchW, xEnd: procWidth, yStart: 0, yEnd: searchH, targetPin: 1 },
+                { name: 'BR', xStart: procWidth - searchW, xEnd: procWidth, yStart: procHeight - searchH, yEnd: procHeight, targetPin: 2 },
+                { name: 'BL', xStart: 0, xEnd: searchW, yStart: procHeight - searchH, yEnd: procHeight, targetPin: 3 }
+            ];
+
+            let detectedCount = 0;
+
+            zones.forEach(zone => {
+                let visited = new Uint8Array(procWidth * procHeight);
+                let candidates = [];
+
+                for (let y = zone.yStart; y < zone.yEnd; y += 2) {
+                    for (let x = zone.xStart; x < zone.xEnd; x += 2) {
+                        const idx = (y * procWidth + x) * 4;
+                        const r = pixels[idx];
+                        const g = pixels[idx + 1];
+                        const b = pixels[idx + 2];
+                        
+                        const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+                        const vIdx = y * procWidth + x;
+
+                        if (gray < 85 && visited[vIdx] === 0) {
+                            let queue = [];
+                            let xMin = x, xMax = x, yMin = y, yMax = y;
+                            let blobPixels = 0;
+
+                            queue.push({ px: x, py: y });
+                            visited[vIdx] = 1;
+
+                            while (queue.length > 0) {
+                                const curr = queue.shift();
+                                blobPixels++;
+                                
+                                if (curr.px < xMin) xMin = curr.px;
+                                if (curr.px > xMax) xMax = curr.px;
+                                if (curr.py < yMin) yMin = curr.py;
+                                if (curr.py > yMax) yMax = curr.py;
+
+                                const neighbors = [
+                                    { nx: curr.px + 2, ny: curr.py },
+                                    { nx: curr.px - 2, ny: curr.py },
+                                    { nx: curr.px, ny: curr.py + 2 },
+                                    { nx: curr.px, ny: curr.py - 2 }
+                                ];
+
+                                neighbors.forEach(n => {
+                                    if (n.nx >= zone.xStart && n.nx < zone.xEnd && n.ny >= zone.yStart && n.ny < zone.yEnd) {
+                                        const nVIdx = n.ny * procWidth + n.nx;
+                                        if (visited[nVIdx] === 0) {
+                                            const nIdx = nVIdx * 4;
+                                            const nGray = 0.299 * pixels[nIdx] + 0.587 * pixels[nIdx+1] + 0.114 * pixels[nIdx+2];
+                                            if (nGray < 85) {
+                                                visited[nVIdx] = 1;
+                                                queue.push({ px: n.nx, py: n.ny });
+                                            }
+                                        }
+                                    }
+                                });
+                            }
+
+                            const width = xMax - xMin + 1;
+                            const height = yMax - yMin + 1;
+                            const aspect = width / height;
+
+                            if (width >= 12 && width <= 75 && height >= 12 && height <= 75) {
+                                if (aspect >= 0.65 && aspect <= 1.55) {
+                                    const density = blobPixels / ((width * height) / 4);
+                                    if (density > 0.45) {
+                                        candidates.push({
+                                            cx: xMin + width / 2,
+                                            cy: yMin + height / 2,
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (candidates.length > 0) {
+                    let targetX = (zone.name.includes('R')) ? procWidth : 0;
+                    let targetY = (zone.name.includes('B')) ? procHeight : 0;
+
+                    candidates.sort((a, b) => {
+                        const distA = Math.hypot(a.cx - targetX, a.cy - targetY);
+                        const distB = Math.hypot(b.cx - targetX, b.cy - targetY);
+                        return distA - distB;
+                    });
+
+                    const best = candidates[0];
+                    pins[zone.targetPin].u = best.cx / procWidth;
+                    pins[zone.targetPin].v = best.cy / procHeight;
+                    detectedCount++;
+                }
+            });
+
+            drawInteractiveState();
+
+            if (!silent) {
+                if (detectedCount === 4) {
+                    createToast("All anchors snapped successfully!");
+                } else if (detectedCount > 0) {
+                    createToast(`Snapped ${detectedCount}/4 corners. Manual tweak recommended.`);
+                } else {
+                    createToast("Auto-detection limit exceeded. Position pins manually.");
+                }
+            }
+        }
+
+        function updateSensitivityLabel(value) {
+            const label = document.getElementById('sensitivity-value');
+            if (label) label.innerText = value + "%";
+            if (uploadedImage) {
+                performExtraction(); 
+            }
+        }
+
+        function drawInteractiveState() {
+            if (!interactiveCanvas) {
+                interactiveCanvas = document.getElementById('scan-display-canvas');
+            }
+            if (interactiveCanvas && !interactiveCtx) {
+                interactiveCtx = interactiveCanvas.getContext('2d', { willReadFrequently: true });
+            }
+            if (!uploadedImage || !interactiveCanvas || !interactiveCtx) return;
+
+            const cw = interactiveCanvas.width;
+            const ch = interactiveCanvas.height;
+
+            interactiveCtx.clearRect(0, 0, cw, ch);
+            interactiveCtx.drawImage(uploadedImage, 0, 0, cw, ch);
+
+            interactiveCtx.fillStyle = 'rgba(15, 23, 42, 0.45)';
+            interactiveCtx.beginPath();
+            interactiveCtx.moveTo(0, 0);
+            interactiveCtx.lineTo(cw, 0);
+            interactiveCtx.lineTo(cw, ch);
+            interactiveCtx.lineTo(0, ch);
+            interactiveCtx.lineTo(0, 0);
+            
+            interactiveCtx.moveTo(pins[0].u * cw, pins[0].v * ch);
+            interactiveCtx.lineTo(pins[3].u * cw, pins[3].v * ch);
+            interactiveCtx.lineTo(pins[2].u * cw, pins[2].v * ch);
+            interactiveCtx.lineTo(pins[1].u * cw, pins[1].v * ch);
+            interactiveCtx.lineTo(pins[0].u * cw, pins[0].v * ch);
+            interactiveCtx.fill("evenodd");
+
+            interactiveCtx.strokeStyle = '#3b82f6'; 
+            interactiveCtx.lineWidth = 2.5;
+            interactiveCtx.setLineDash([5, 5]);
+            interactiveCtx.beginPath();
+            interactiveCtx.moveTo(pins[0].u * cw, pins[0].v * ch);
+            interactiveCtx.lineTo(pins[1].u * cw, pins[1].v * ch);
+            interactiveCtx.lineTo(pins[2].u * cw, pins[2].v * ch);
+            interactiveCtx.lineTo(pins[3].u * cw, pins[3].v * ch);
+            interactiveCtx.closePath();
+            interactiveCtx.stroke();
+            interactiveCtx.setLineDash([]); 
+
+            if (evaluatedBubblesProof.length > 0) {
+                const boundingWidth = A5WarpConfig.width - 60;   
+                const boundingHeight = A5WarpConfig.height - 60; 
+
+                evaluatedBubblesProof.forEach(b => {
+                    const u = (b.x - 30) / boundingWidth;
+                    const v = (b.y - 30) / boundingHeight;
+
+                    const dispX = (1 - u) * (1 - v) * (pins[0].u * cw) + 
+                                  u * (1 - v) * (pins[1].u * cw) + 
+                                  u * v * (pins[2].u * cw) + 
+                                  (1 - u) * v * (pins[3].u * cw);
+                                 
+                    const dispY = (1 - u) * (1 - v) * (pins[0].v * ch) + 
+                                  u * (1 - v) * (pins[1].v * ch) + 
+                                  u * v * (pins[2].v * ch) + 
+                                  (1 - u) * v * (pins[3].v * ch);
+
+                    const dispRadius = b.r * (cw / A5WarpConfig.width) * 1.1;
+
+                    interactiveCtx.beginPath();
+                    interactiveCtx.arc(dispX, dispY, dispRadius, 0, Math.PI * 2);
+                    
+                    if (b.status === 'correct') {
+                        interactiveCtx.fillStyle = 'rgba(16, 185, 129, 0.45)';
+                        interactiveCtx.strokeStyle = '#10b981';
+                    } else if (b.status === 'incorrect') {
+                        interactiveCtx.fillStyle = 'rgba(239, 68, 68, 0.45)';
+                        interactiveCtx.strokeStyle = '#ef4444';
+                    } else if (b.status === 'key-indicator') {
+                        interactiveCtx.fillStyle = 'rgba(245, 158, 11, 0.15)';
+                        interactiveCtx.strokeStyle = '#f59e0b';
+                    } else {
+                        interactiveCtx.fillStyle = 'rgba(148, 163, 184, 0.15)';
+                        interactiveCtx.strokeStyle = '#94a3b8';
+                    }
+                    
+                    interactiveCtx.fill();
+                    interactiveCtx.lineWidth = 1.5;
+                    interactiveCtx.stroke();
+                });
+            }
+
+            pins.forEach((pin, index) => {
+                const px = pin.u * cw;
+                const py = pin.v * ch;
+                
+                interactiveCtx.beginPath();
+                interactiveCtx.arc(px, py, 14, 0, Math.PI*2);
+                interactiveCtx.fillStyle = index === activePinIndex ? 'rgba(59, 130, 246, 0.4)' : 'rgba(255, 255, 255, 0.6)';
+                interactiveCtx.fill();
+
+                interactiveCtx.beginPath();
+                interactiveCtx.arc(px, py, 6, 0, Math.PI*2);
+                interactiveCtx.fillStyle = '#3b82f6'; 
+                interactiveCtx.fill();
+                interactiveCtx.lineWidth = 2;
+                interactiveCtx.strokeStyle = '#ffffff';
+                interactiveCtx.stroke();
+            });
+        }
+
+        function processScan() {
+            if (!uploadedImage) return;
+
+            const btn = document.getElementById('btn-process');
+            if (btn) {
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Reading markings...';
+                btn.disabled = true;
+            }
+
+            setTimeout(() => {
+                performExtraction();
+                if (btn) {
+                    btn.innerHTML = '<i class="fa-solid fa-gears mr-2"></i> Run OMR Analysis';
+                    btn.disabled = false;
+                }
+            }, 80);
+        }
+
+        function performExtraction() {
+            if (!interactiveCanvas) {
+                interactiveCanvas = document.getElementById('scan-display-canvas');
+            }
+            if (interactiveCanvas && !interactiveCtx) {
+                interactiveCtx = interactiveCanvas.getContext('2d', { willReadFrequently: true });
+            }
+            if (!interactiveCanvas || !interactiveCtx) return;
+
+            const cw = interactiveCanvas.width;
+            const ch = interactiveCanvas.height;
+            const srcImageData = interactiveCtx.getImageData(0, 0, cw, ch);
+
+            const warpCanvas = document.createElement('canvas');
+            warpCanvas.width = A5WarpConfig.width;
+            warpCanvas.height = A5WarpConfig.height;
+            const warpCtx = warpCanvas.getContext('2d', { willReadFrequently: true });
+            const destImageData = warpCtx.createImageData(A5WarpConfig.width, A5WarpConfig.height);
+
+            for (let i = 0; i < destImageData.data.length; i += 4) {
+                destImageData.data[i] = 255;     
+                destImageData.data[i + 1] = 255; 
+                destImageData.data[i + 2] = 255; 
+                destImageData.data[i + 3] = 255; 
+            }
+
+            const pPts = pins.map(p => ({ x: p.u * cw, y: p.v * ch }));
+            const boundingWidth = A5WarpConfig.width - 60;   
+            const boundingHeight = A5WarpConfig.height - 60; 
+            
+            for (let y = 0; y < A5WarpConfig.height; y++) {
+                const v = (y - 30) / boundingHeight;
+                for (let x = 0; x < A5WarpConfig.width; x++) {
+                    const u = (x - 30) / boundingWidth;
+
+                    const srcX = (1 - u) * (1 - v) * pPts[0].x + 
+                                 u * (1 - v) * pPts[1].x + 
+                                 u * v * pPts[2].x + 
+                                 (1 - u) * v * pPts[3].x;
+                                 
+                    const srcY = (1 - u) * (1 - v) * pPts[0].y + 
+                                 u * (1 - v) * pPts[1].y + 
+                                 u * v * pPts[2].y + 
+                                 (1 - u) * v * pPts[3].y;
+
+                    const sX = Math.round(srcX);
+                    const sY = Math.round(srcY);
+
+                    if (sX >= 0 && sX < cw && sY >= 0 && sY < ch) {
+                        const srcIdx = (sY * cw + sX) * 4;
+                        const destIdx = (y * A5WarpConfig.width + x) * 4;
+                        
+                        destImageData.data[destIdx] = srcImageData.data[srcIdx];
+                        destImageData.data[destIdx + 1] = srcImageData.data[srcIdx + 1];
+                        destImageData.data[destIdx + 2] = srcImageData.data[srcIdx + 2];
+                        destImageData.data[destIdx + 3] = 255; 
+                    }
+                }
+            }
+
+            warpCtx.putImageData(destImageData, 0, 0);
+            extractBubbleData(warpCtx, destImageData);
+        }
+
+        function getBubbleDarkRatio(opt, warpedImageData, threshold) {
+            const warpedX = Math.round(opt.x);
+            const warpedY = Math.round(opt.y);
+            
+            const sampleRadius = Math.max(4, Math.round(opt.r * 0.85));
+            let totalPixels = 0;
+            let darkPixels = 0;
+
+            for (let dy = -sampleRadius; dy <= sampleRadius; dy++) {
+                for (let dx = -sampleRadius; dx <= sampleRadius; dx++) {
+                    if (dx*dx + dy*dy <= sampleRadius*sampleRadius) {
+                        const px = warpedX + dx;
+                        const py = warpedY + dy;
+                        
+                        if (px >= 0 && px < A5WarpConfig.width && py >= 0 && py < A5WarpConfig.height) {
+                            const idx = (py * A5WarpConfig.width + px) * 4;
+                            const r = warpedImageData.data[idx];
+                            const g = warpedImageData.data[idx + 1];
+                            const b = warpedImageData.data[idx + 2];
+                            
+                            const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+                            
+                            totalPixels++;
+                            if (gray < threshold) {
+                                darkPixels++;
+                            }
+                        }
+                    }
+                }
+            }
+            return totalPixels > 0 ? darkPixels / totalPixels : 0;
+        }
+
+        function extractBubbleData(warpCtx, warpedImageData) {
+            const questionsDict = {};
+            const idDict = {};
+
+            currentGeneratedBubbles.forEach(b => {
+                if (b.type === 'question') {
+                    if (!questionsDict[b.q]) questionsDict[b.q] = [];
+                    questionsDict[b.q].push(b);
+                } else if (b.type === 'id') {
+                    if (!idDict[b.col]) idDict[b.col] = [];
+                    idDict[b.col].push(b);
+                }
+            });
+
+            const sensSlider = document.getElementById('cfg-darkness-sens');
+            const sliderVal = sensSlider ? (parseInt(sensSlider.value) || 60) : 60;
+            const DARK_THRESHOLD = 95 + (sliderVal * 1.1); 
+            const FILL_PERCENT_THRESHOLD = 0.35; 
+
+            const finalResults = {
+                questions: {},
+                learnerId: "",
+                score: 0,
+                total: tosMap.length,
+                answers: {}
+            };
+
+            evaluatedBubblesProof = [];
+
+            let learnerIdArr = [];
+            for (let c = 0; c < 4; c++) {
+                if (!idDict[c]) continue;
+                
+                let highestDarkRatio = 0;
+                let markedVals = [];
+
+                idDict[c].forEach(opt => {
+                    const darkRatio = getBubbleDarkRatio(opt, warpedImageData, DARK_THRESHOLD);
+                    if (darkRatio > highestDarkRatio) {
+                        highestDarkRatio = darkRatio;
+                    }
+                    if (darkRatio > FILL_PERCENT_THRESHOLD) {
+                        markedVals.push(opt);
+                    }
+                });
+
+                if (markedVals.length === 1) {
+                    learnerIdArr.push(markedVals[0].val);
+                    evaluatedBubblesProof.push({
+                        x: markedVals[0].x,
+                        y: markedVals[0].y,
+                        r: markedVals[0].r,
+                        status: 'correct' 
+                    });
+                } else if (markedVals.length > 1) {
+                    learnerIdArr.push("*"); 
+                    markedVals.forEach(opt => {
+                        evaluatedBubblesProof.push({ x: opt.x, y: opt.y, r: opt.r, status: 'incorrect' });
+                    });
+                } else {
+                    learnerIdArr.push("_"); 
+                }
+            }
+            finalResults.learnerId = learnerIdArr.join("");
+
+            for (const [qNum, options] of Object.entries(questionsDict)) {
+                let highestDarkRatio = 0;
+                let markedAnswers = [];
+
+                options.forEach(opt => {
+                    const darkRatio = getBubbleDarkRatio(opt, warpedImageData, DARK_THRESHOLD);
+                    if (darkRatio > highestDarkRatio) {
+                        highestDarkRatio = darkRatio;
+                    }
+                    if (darkRatio > FILL_PERCENT_THRESHOLD) {
+                        markedAnswers.push(opt);
+                    }
+                });
+
+                let detectedAns = "BLANK";
+                if (markedAnswers.length === 1) {
+                    detectedAns = markedAnswers[0].opt;
+                } else if (markedAnswers.length > 1) {
+                    detectedAns = "MULTIPLE";
+                }
+
+                finalResults.answers[qNum] = detectedAns;
+
+                const tosItem = tosMap.find(item => item.q === parseInt(qNum));
+                const correctKey = tosItem ? tosItem.key : 'A';
+                const isCorrect = detectedAns === correctKey;
+
+                if (isCorrect) {
+                    finalResults.score++;
+                    finalResults.questions[qNum] = { answer: detectedAns, isCorrect: true, key: correctKey };
+                    
+                    evaluatedBubblesProof.push({
+                        x: markedAnswers[0].x,
+                        y: markedAnswers[0].y,
+                        r: markedAnswers[0].r,
+                        status: 'correct'
+                    });
+                } else {
+                    finalResults.questions[qNum] = { answer: detectedAns, isCorrect: false, key: correctKey };
+                    
+                    if (markedAnswers.length === 1) {
+                        evaluatedBubblesProof.push({
+                            x: markedAnswers[0].x,
+                            y: markedAnswers[0].y,
+                            r: markedAnswers[0].r,
+                            status: 'incorrect'
+                        });
+                    } else if (markedAnswers.length > 1) {
+                        markedAnswers.forEach(opt => {
+                            evaluatedBubblesProof.push({ x: opt.x, y: opt.y, r: opt.r, status: 'incorrect' });
+                        });
+                    }
+
+                    const correctBubbleObj = options.find(o => o.opt === correctKey);
+                    if (correctBubbleObj) {
+                        evaluatedBubblesProof.push({
+                            x: correctBubbleObj.x,
+                            y: correctBubbleObj.y,
+                            r: correctBubbleObj.r,
+                            status: 'key-indicator'
+                        });
+                    }
+                }
+            }
+
+            drawInteractiveState();
+            lastScanResults = finalResults;
+            renderScanResults(finalResults);
+        }
+
+        function renderScanResults(results) {
+            const resultsEmpty = document.getElementById('results-empty');
+            if (resultsEmpty) resultsEmpty.classList.add('hidden');
+            const container = document.getElementById('results-container');
+            if (container) container.classList.remove('hidden');
+
+            const scoreEl = document.getElementById('scanned-score');
+            if (scoreEl) scoreEl.innerText = `${results.score} / ${results.total}`;
+            const learnerIdEl = document.getElementById('scanned-learner-id');
+            if (learnerIdEl) learnerIdEl.innerText = results.learnerId;
+
+            const tbody = document.getElementById('results-table-body');
+            if (!tbody) return;
+            tbody.innerHTML = ''; 
+
+            Object.keys(results.questions).sort((a,b) => parseInt(a) - parseInt(b)).forEach(qNum => {
+                const item = results.questions[qNum];
+                let badgeClass = "bg-green-100 text-green-800 border border-green-200";
+                let statusIcon = '<i class="fa-solid fa-circle-check text-green-600"></i>';
+                
+                if (!item.isCorrect) {
+                    badgeClass = item.answer === "BLANK" || item.answer === "MULTIPLE" 
+                        ? "bg-amber-100 text-amber-800 border border-amber-200" 
+                        : "bg-red-100 text-red-800 border border-red-200";
+                    statusIcon = '<i class="fa-solid fa-circle-xmark text-red-600"></i>';
+                }
+
+                const tr = document.createElement('tr');
+                tr.className = "bg-white hover:bg-slate-50 transition-colors";
+                tr.innerHTML = `
+                    <td class="px-3 py-2.5 font-semibold text-slate-800">Q ${qNum}</td>
+                    <td class="px-3 py-2.5">
+                        <span class="${badgeClass} font-mono font-bold px-2 py-0.5 rounded text-[10px]">
+                            ${item.answer}
+                        </span>
+                    </td>
+                    <td class="px-3 py-2.5 font-mono text-slate-400 font-bold">${item.key}</td>
+                    <td class="px-3 py-2.5 text-right">${statusIcon}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            if (selectedClassId) {
+                const activeClass = classes.find(c => c.id === selectedClassId);
+                if (activeClass) {
+                    const matchedRecord = activeClass.records.find(r => r.learnerId && r.learnerId.endsWith(results.learnerId));
+                    const nameInput = document.getElementById('record-student-name');
+                    if (nameInput) {
+                        nameInput.value = matchedRecord ? matchedRecord.studentName : "";
+                    }
+                    const absencesInput = document.getElementById('record-student-absences');
+                    if (absencesInput) {
+                        absencesInput.value = matchedRecord ? (matchedRecord.absences || 0) : 0;
+                    }
+                    const genderInput = document.getElementById('record-student-gender');
+                    if (genderInput) {
+                        genderInput.value = matchedRecord ? (matchedRecord.gender || "N/A") : "N/A";
+                    }
+                }
+            }
+        }
+
+        function toggleCreateClassModal(show) {
+            const modal = document.getElementById('class-modal');
+            if (modal) modal.classList.toggle('hidden', !show);
+            if (show) {
+                const nameEl = document.getElementById('modal-class-name');
+                const subjectEl = document.getElementById('modal-class-subject');
+                const gradeEl = document.getElementById('modal-class-grade');
+                if (nameEl) nameEl.value = "";
+                if (subjectEl) subjectEl.value = "";
+                if (gradeEl) gradeEl.value = "";
+            }
+        }
+
+        function createNewClass() {
+            const nameEl = document.getElementById('modal-class-name');
+            const subjectEl = document.getElementById('modal-class-subject');
+            const gradeEl = document.getElementById('modal-class-grade');
+
+            const name = nameEl ? nameEl.value.trim() : "";
+            const subject = subjectEl ? subjectEl.value.trim() : "General";
+            const grade = gradeEl ? gradeEl.value.trim() : "N/A";
+
+            if (!name) {
+                createToast("Roster descriptor/class name required.");
+                return;
+            }
+
+            const newClass = {
+                id: 'class_' + Date.now(),
+                name: name,
+                subject: subject || 'General',
+                grade: grade || 'N/A',
+                records: []
+            };
+
+            classes.push(newClass);
+            saveState();
+            saveClassToCloud(newClass); // Secure database sync
+            renderClassroomDashboard();
+            updateClassRegistrationDropdowns();
+            toggleCreateClassModal(false);
+            createToast("New class profile created!");
+        }
+
+        function selectClass(classId) {
+            selectedClassId = classId;
+            renderClassroomDashboard();
+            
+            const selectEl = document.getElementById('record-class-select');
+            if (selectEl) selectEl.value = classId;
+        }
+
+        function renderClassroomDashboard() {
+            const cardsContainer = document.getElementById('class-cards-container');
+            if (!cardsContainer) return;
+            cardsContainer.innerHTML = '';
+
+            const analyticsView = document.getElementById('analytics-view-container');
+            const analyticsPlaceholder = document.getElementById('analytics-placeholder');
+
+            if (classes.length === 0) {
+                cardsContainer.innerHTML = `
+                    <div class="text-center py-6 text-slate-400 text-xs">
+                        <i class="fa-solid fa-chalkboard text-2xl text-slate-200 mb-2"></i>
+                        <p>No rosters generated.</p>
+                    </div>
+                `;
+                if (analyticsView) analyticsView.classList.add('hidden');
+                if (analyticsPlaceholder) analyticsPlaceholder.classList.remove('hidden');
+                return;
+            }
+
+            classes.forEach(c => {
+                const isSelected = c.id === selectedClassId;
+                const scoreCount = c.records.length;
+                
+                let avgText = "0%";
+                if (scoreCount > 0) {
+                    const sum = c.records.reduce((acc, r) => {
+                        const rawPct = r.total > 0 ? ((r.score / r.total) * 100) : 0;
+                        const reportedGrade = calculateReportedGrade(rawPct);
+                        return acc + reportedGrade;
+                    }, 0);
+                    avgText = Math.round(sum / scoreCount) + "%";
+                }
+
+                const div = document.createElement('div');
+                div.className = `p-4 rounded-xl border cursor-pointer transition-all ${
+                    isSelected 
+                    ? 'bg-blue-50/50 border-blue-400 shadow-sm' 
+                    : 'bg-white border-slate-100 hover:border-slate-300'
+                }`;
+                div.onclick = () => selectClass(c.id);
+
+                div.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h4 class="font-bold text-slate-800 text-sm">${escapeHtml(c.name)}</h4>
+                            <span class="text-xs text-slate-400 font-medium block mt-0.5">${escapeHtml(c.subject)} | ${escapeHtml(c.grade)}</span>
+                        </div>
+                        <span class="text-[10px] font-bold ${isSelected ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-600'} px-2 py-0.5 rounded-full uppercase">
+                            ${scoreCount} Learners
+                        </span>
+                    </div>
+                    <div class="flex justify-between items-center mt-3 pt-3 border-t border-slate-100/70 text-xs">
+                        <span class="text-slate-400 font-medium">Class Average</span>
+                        <span class="font-bold text-slate-700">${avgText}</span>
+                    </div>
+                `;
+                cardsContainer.appendChild(div);
+            });
+
+            if (selectedClassId) {
+                const activeClass = classes.find(c => c.id === selectedClassId);
+                if (activeClass) {
+                    if (analyticsPlaceholder) analyticsPlaceholder.classList.add('hidden');
+                    if (analyticsView) analyticsView.classList.remove('hidden');
+                    renderClassAnalytics(activeClass); 
+                }
+            } else {
+                if (analyticsView) analyticsView.classList.add('hidden');
+                if (analyticsPlaceholder) analyticsPlaceholder.classList.remove('hidden');
+            }
+        }
+
+        function renderClassAnalytics(activeClass) {
+            const records = activeClass.records;
+            const classSize = records.length;
+
+            const sizeEl = document.getElementById('stat-class-size');
+            if (sizeEl) sizeEl.innerText = classSize;
+
+            const tbody = document.getElementById('roster-table-body');
+            const warningsContainer = document.getElementById('attendance-critical-warnings');
+
+            if (warningsContainer) {
+                warningsContainer.innerHTML = '';
+                warningsContainer.classList.add('hidden');
+            }
+
+            if (classSize === 0) {
+                const avgEl = document.getElementById('stat-class-avg');
+                const highEl = document.getElementById('stat-class-high');
+                if (avgEl) avgEl.innerText = "0%";
+                if (highEl) highEl.innerText = "0%";
+                if (tbody) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="8" class="px-4 py-8 text-center text-slate-400 text-xs font-medium">
+                                <i class="fa-solid fa-users-slash text-2xl text-slate-200 mb-2"></i>
+                                <p>No graded results posted inside this class ledger yet.</p>
+                                <button onclick="triggerRosterCSVUpload()" class="mt-2 text-indigo-600 hover:text-indigo-800 font-bold underline text-xs">
+                                    Import Students CSV Now
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }
+                
+                const distContainer = document.getElementById('bands-distribution-cards');
+                if (distContainer) distContainer.innerHTML = '';
+                const actionContainer = document.getElementById('bands-action-plans-container');
+                if (actionContainer) actionContainer.innerHTML = '';
+                const compTableBody = document.getElementById('competency-mastery-table-body');
+                if (compTableBody) compTableBody.innerHTML = '';
+
+                return;
+            }
+
+            const computedStudents = records.map(r => {
+                const rawPct = r.total > 0 ? ((r.score / r.total) * 100) : 0;
+                const reportedGrade = calculateReportedGrade(rawPct);
+                const band = getQualitativeBand(reportedGrade);
+                return {
+                    ...r,
+                    rawPct: Math.round(rawPct),
+                    reportedGrade: reportedGrade,
+                    band: band
+                };
+            });
+
+            const reportedGrades = computedStudents.map(s => s.reportedGrade);
+            const sumReported = reportedGrades.reduce((acc, val) => acc + val, 0);
+            const average = Math.round(sumReported / classSize);
+            const highest = Math.max(...reportedGrades);
+
+            const avgEl = document.getElementById('stat-class-avg');
+            const highEl = document.getElementById('stat-class-high');
+            if (avgEl) avgEl.innerText = average + "%";
+            if (highEl) highEl.innerText = highest + "%";
+
+            let warningTriggered = false;
+            computedStudents.forEach(student => {
+                if (student.absences >= 12) {
+                    warningTriggered = true;
+                    const alertDiv = document.createElement('div');
+                    alertDiv.className = "bg-rose-50 border-l-4 border-rose-500 p-4 rounded-r-xl flex justify-between items-start animate-pulse";
+                    alertDiv.innerHTML = `
+                        <div class="flex items-start gap-3">
+                            <i class="fa-solid fa-triangle-exclamation text-rose-500 mt-1"></i>
+                            <div>
+                                <h5 class="font-bold text-rose-800 text-xs">ABSENCE PROTOCOL CEILING REACHED (SII MANDATED)</h5>
+                                <p class="text-[11px] text-rose-700 mt-0.5 leading-relaxed">
+                                    Learner **${escapeHtml(student.studentName)}** (LRN: ${escapeHtml(student.learnerId)}) shows **${student.absences} absent days**. This triggers mandatory class interventions.
+                                </p>
+                            </div>
+                        </div>
+                        <span class="bg-rose-100 text-rose-800 font-bold text-[9px] px-2 py-0.5 rounded-full uppercase">Deploy SII Plan</span>
+                    `;
+                    warningsContainer.appendChild(alertDiv);
+                }
+            });
+
+            if (warningTriggered && warningsContainer) {
+                warningsContainer.classList.remove('hidden');
+            }
+
+            if (tbody) {
+                tbody.innerHTML = '';
+                computedStudents.forEach((student, index) => {
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-slate-50 transition-colors";
+                    
+                    const absenceWarning = student.absences >= 12 
+                        ? '<span class="text-rose-600 font-bold ml-1" title="Critical absences!"><i class="fa-solid fa-triangle-exclamation"></i></span>' 
+                        : '';
+
+                    const genVal = student.gender ? student.gender.trim().toUpperCase() : 'N/A';
+                    let genderBadge = '<span class="text-slate-400 font-bold">-</span>';
+                    if (genVal.startsWith('M')) {
+                        genderBadge = '<span class="bg-blue-50 text-blue-700 border border-blue-100 px-2.5 py-0.5 rounded text-[10px] font-bold"><i class="fa-solid fa-mars mr-1"></i>M</span>';
+                    } else if (genVal.startsWith('F')) {
+                        genderBadge = '<span class="bg-pink-50 text-pink-700 border border-pink-100 px-2.5 py-0.5 rounded text-[10px] font-bold"><i class="fa-solid fa-venus mr-1"></i>F</span>';
+                    }
+
+                    const hasTestRecords = student.total > 0;
+                    const rawPctDisplay = hasTestRecords ? `${student.rawPct}%` : '<span class="text-slate-400 italic">No score</span>';
+                    const reportedGradeDisplay = hasTestRecords ? `${student.reportedGrade}%` : '<span class="text-slate-400 italic">No score</span>';
+                    const bandBadgeDisplay = hasTestRecords ? `
+                        <span class="inline-block px-2.5 py-1 rounded-full text-[10px] font-bold border ${student.band.colorClass}">
+                            ${student.band.name}
+                        </span>
+                    ` : '<span class="bg-slate-50 text-slate-400 border border-slate-200 px-2 py-0.5 rounded-full text-[10px]">Pending Evaluation</span>';
+
+                    tr.innerHTML = `
+                        <td class="px-4 py-3 font-mono font-bold text-slate-700">${escapeHtml(student.learnerId)}</td>
+                        <td class="px-4 py-3 font-semibold text-slate-800 flex items-center">${escapeHtml(student.studentName)} ${absenceWarning}</td>
+                        <td class="px-4 py-3 text-center">${genderBadge}</td>
+                        <td class="px-4 py-3 text-center font-bold text-slate-600">${student.absences || 0}</td>
+                        <td class="px-4 py-3 text-center text-slate-500 font-mono">${rawPctDisplay}</td>
+                        <td class="px-4 py-3 text-center font-bold text-slate-800 font-mono">${reportedGradeDisplay}</td>
+                        <td class="px-4 py-3 text-center">
+                            ${bandBadgeDisplay}
+                        </td>
+                        <td class="px-4 py-3 text-right">
+                            <button id="btn-remove-student-${index}" class="text-slate-300 hover:text-red-500 transition-colors">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+
+                    document.getElementById(`btn-remove-student-${index}`).addEventListener('click', () => {
+                        removeStudentRecord(activeClass.id, index);
+                    });
+                });
+            }
+
+            generateAutomatedActionPlans(computedStudents);
+            computeCompetencyItemMastery(computedStudents);
+        }
+
+        function generateAutomatedActionPlans(students) {
+            const distContainer = document.getElementById('bands-distribution-cards');
+            const actionContainer = document.getElementById('bands-action-plans-container');
+            if (!distContainer || !actionContainer) return;
+
+            distContainer.innerHTML = '';
+            actionContainer.innerHTML = '';
+
+            const groups = {
+                advancing: [],
+                benchmarking: [],
+                connecting: [],
+                developing: [],
+                emerging: []
+            };
+
+            const gradedStudents = students.filter(s => s.total > 0);
+
+            gradedStudents.forEach(s => {
+                if (s.reportedGrade >= 90) groups.advancing.push(s);
+                else if (s.reportedGrade >= 80) groups.benchmarking.push(s);
+                else if (s.reportedGrade >= 75) groups.connecting.push(s);
+                else if (s.reportedGrade >= 65) groups.developing.push(s);
+                else groups.emerging.push(s);
+            });
+
+            Object.keys(groups).forEach(key => {
+                const meta = DepEdBands[key];
+                const count = groups[key].length;
+                const percent = gradedStudents.length > 0 ? Math.round((count / gradedStudents.length) * 100) : 0;
+
+                const card = document.createElement('div');
+                card.className = `p-4 rounded-xl border flex flex-col justify-between ${meta.colorClass}`;
+                card.innerHTML = `
+                    <div>
+                        <span class="text-[9px] font-bold uppercase tracking-wider block opacity-75">${meta.name.split(' ')[0]}</span>
+                        <span class="text-2xl font-bold block mt-1">${count}</span>
+                    </div>
+                    <span class="text-[10px] font-semibold opacity-75 mt-2">${percent}% of roster</span>
+                `;
+                distContainer.appendChild(card);
+            });
+
+            Object.keys(groups).forEach(key => {
+                const meta = DepEdBands[key];
+                const list = groups[key];
+
+                const planDiv = document.createElement('div');
+                planDiv.className = "border border-slate-200 rounded-xl p-4 bg-slate-50 space-y-3";
+                
+                let studentListHTML = "";
+                if (list.length === 0) {
+                    studentListHTML = '<span class="text-[11px] text-slate-400 italic">No students allocated inside this band bracket.</span>';
+                } else {
+                    studentListHTML = list.map(s => `
+                        <span class="inline-flex items-center gap-1 bg-white border border-slate-200 text-slate-700 text-xs font-semibold px-2.5 py-1 rounded-lg">
+                            <i class="fa-solid fa-user-graduate text-slate-400"></i> ${escapeHtml(s.studentName)} (${s.reportedGrade}%)
+                        </span>
+                    `).join(' ');
+                }
+
+                planDiv.innerHTML = `
+                    <div class="flex flex-col sm:flex-row justify-between sm:items-center border-b border-slate-200/60 pb-3 gap-2">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full ${meta.badgeClass.replace('text-white', '')}"></span>
+                            <h5 class="font-bold text-slate-800 text-xs uppercase tracking-wide">${meta.name}</h5>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase">MANDATED RESPONSE:</span>
+                            <span class="text-[10px] font-extrabold text-indigo-700 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-md uppercase">${meta.response}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+                        <div class="md:col-span-8 space-y-1">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase block">Cognitive Profiles</span>
+                            <p class="text-xs text-slate-600 leading-relaxed">${meta.desc}</p>
+                        </div>
+                        <div class="md:col-span-4 space-y-1">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase block">Mandated Action Framework</span>
+                            <p class="text-xs text-slate-700 font-semibold leading-relaxed">${meta.actions}</p>
+                        </div>
+                    </div>
+
+                    <div class="pt-3 border-t border-slate-200/60">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase block mb-1.5">Targeted Students</span>
+                        <div class="flex flex-wrap gap-1.5">${studentListHTML}</div>
+                    </div>
+                `;
+                actionContainer.appendChild(planDiv);
+            });
+        }
+
+        function computeCompetencyItemMastery(students) {
+            const tbody = document.getElementById('competency-mastery-table-body');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            const compMap = {};
+            const gradedStudents = students.filter(s => s.total > 0);
+
+            if (gradedStudents.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="px-4 py-8 text-center text-slate-400 text-xs italic">
+                            No evaluative scores parsed to build competency masteries.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            gradedStudents.forEach(student => {
+                tosMap.forEach(item => {
+                    const studentAns = student.answers[item.q];
+                    const isCorrect = studentAns === item.key;
+
+                    if (!compMap[item.competency]) {
+                        compMap[item.competency] = {
+                            name: item.competency,
+                            items: [],
+                            correctCount: 0,
+                            totalCount: 0
+                        };
+                    }
+
+                    if (!compMap[item.competency].items.includes(item.q)) {
+                        compMap[item.competency].items.push(item.q);
+                    }
+
+                    compMap[item.competency].totalCount++;
+                    if (isCorrect) {
+                        compMap[item.competency].correctCount++;
+                    }
+                });
+            });
+
+            Object.keys(compMap).forEach(key => {
+                const comp = compMap[key];
+                const masteryPct = Math.round((comp.correctCount / comp.totalCount) * 100);
+                const itemsStr = comp.items.sort((a,b)=>a-b).join(', ');
+
+                let statusBadge = "";
+                let intervention = "";
+
+                if (masteryPct >= 75) {
+                    statusBadge = '<span class="inline-flex items-center gap-1 bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded-full font-bold text-[9px] uppercase"><i class="fa-solid fa-circle-check"></i> Sufficient Mastery</span>';
+                    intervention = "Maintain current instructional design; provide validation and deeper transfer items.";
+                } else if (masteryPct >= 65) {
+                    statusBadge = '<span class="inline-flex items-center gap-1 bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full font-bold text-[9px] uppercase"><i class="fa-solid fa-triangle-exclamation"></i> Support Target</span>';
+                    intervention = "Integrate scaffolding layers; design focused review sheets for mapped items: **(" + itemsStr + ")**.";
+                } else {
+                    statusBadge = '<span class="inline-flex items-center gap-1 bg-red-50 text-red-700 border border-red-200 px-2 py-0.5 rounded-full font-bold text-[9px] uppercase"><i class="fa-solid fa-circle-xmark"></i> Core Remediation</span>';
+                    intervention = "Initiate **ARAL remediation workflows** on core concepts mapped to items: **(" + itemsStr + ")**.";
+                }
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition-colors";
+                tr.innerHTML = `
+                    <td class="px-4 py-3 font-semibold text-slate-800 text-xs">${escapeHtml(comp.name)}</td>
+                    <td class="px-4 py-3 text-center font-mono text-slate-500 text-xs">${itemsStr}</td>
+                    <td class="px-4 py-3 text-center font-bold text-slate-700 text-xs">${masteryPct}%</td>
+                    <td class="px-4 py-3 text-center">${statusBadge}</td>
+                    <td class="px-4 py-3 text-slate-600 leading-relaxed text-xs font-semibold">${intervention}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function removeStudentRecord(classId, studentIndex) {
+            const activeClass = classes.find(c => c.id === classId);
+            if (activeClass) {
+                activeClass.records.splice(studentIndex, 1);
+                saveState();
+                saveClassToCloud(activeClass); // Secure database sync
+                renderClassroomDashboard();
+                createToast("Student record purged.");
+            }
+        }
+
+        function updateClassRegistrationDropdowns() {
+            const select = document.getElementById('record-class-select');
+            if (!select) return;
+            select.innerHTML = '<option value="">-- Choose Class Ledger --</option>';
+
+            classes.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.id;
+                opt.text = c.name;
+                select.appendChild(opt);
+            });
+
+            if (selectedClassId) {
+                select.value = selectedClassId;
+            }
+        }
+
+        function commitScanRecord() {
+            if (!lastScanResults) {
+                createToast("Run an OMR scan first.");
+                return;
+            }
+
+            const selectEl = document.getElementById('record-class-select');
+            const nameEl = document.getElementById('record-student-name');
+            const absencesEl = document.getElementById('record-student-absences');
+            const genderEl = document.getElementById('record-student-gender');
+            if (!selectEl || !nameEl || !absencesEl || !genderEl) return;
+
+            const targetClassId = selectEl.value;
+            const studentName = nameEl.value.trim();
+            const absences = parseInt(absencesEl.value) || 0;
+            const gender = genderEl.value;
+
+            if (!targetClassId) {
+                createToast("Assign a target class ledger first.");
+                return;
+            }
+            if (!studentName) {
+                createToast("Specify student profile name.");
+                return;
+            }
+
+            const activeClass = classes.find(c => c.id === targetClassId);
+            if (!activeClass) return;
+
+            let targetLearnerId = lastScanResults.learnerId;
+            const matchedStudent = activeClass.records.find(r => r.learnerId && r.learnerId.endsWith(lastScanResults.learnerId));
+            if (matchedStudent) {
+                targetLearnerId = matchedStudent.learnerId;
+            }
+
+            const duplicateIndex = activeClass.records.findIndex(r => r.learnerId === targetLearnerId);
+            if (duplicateIndex !== -1) {
+                activeClass.records.splice(duplicateIndex, 1);
+            }
+
+            activeClass.records.push({
+                learnerId: targetLearnerId,
+                studentName: studentName,
+                gender: gender, 
+                absences: absences,
+                score: lastScanResults.score,
+                total: lastScanResults.total,
+                answers: { ...lastScanResults.answers },
+                timestamp: Date.now()
+            });
+
+            saveState();
+            saveClassToCloud(activeClass); // Secure database sync
+            renderClassroomDashboard();
+            createToast("Performance log committed to active ledger.");
+            switchTab('class');
+        }
+
+        function exportClassToCSV() {
+            if (!selectedClassId) return;
+            const activeClass = classes.find(c => c.id === selectedClassId);
+            if (!activeClass || activeClass.records.length === 0) {
+                createToast("Roster record is empty.");
+                return;
+            }
+
+            let csvContent = "Learner ID,Student Name,Gender,Absences,Raw %,Reported %,Qualitative Band,Mandated Response\n";
+            activeClass.records.forEach(r => {
+                const rawPct = r.total > 0 ? ((r.score / r.total) * 100) : 0;
+                const reportedGrade = calculateReportedGrade(rawPct);
+                const band = getQualitativeBand(reportedGrade) || { name: 'Unknown', response: '' };
+
+                csvContent += `"${r.learnerId}","${r.studentName.replace(/"/g, '""')}","${r.gender || 'N/A'}",${r.absences || 0},${Math.round(rawPct)},${reportedGrade},"${band.name.replace(/"/g, '""')}","${band.response}"\n`;
+            });
+
+            triggerCSVDownload(csvContent, `${activeClass.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_ledger_report.csv`);
+        }
+
+        function downloadInstructionalActionPlan() {
+            if (!selectedClassId) return;
+            const activeClass = classes.find(c => c.id === selectedClassId);
+            if (!activeClass || activeClass.records.length === 0) {
+                createToast(" Roster lacks evaluation profiles to construct response plans.");
+                return;
+            }
+
+            let csvContent = "Descriptive Band,Qualitative Mandate,Action Framework Tasks,Student Profiles\n";
+
+            const groups = {
+                advancing: [],
+                benchmarking: [],
+                connecting: [],
+                developing: [],
+                emerging: []
+            };
+
+            activeClass.records.forEach(r => {
+                if (r.total === 0) return; 
+                const rawPct = (r.score / r.total) * 100;
+                const reportedGrade = calculateReportedGrade(rawPct);
+                if (reportedGrade >= 90) groups.advancing.push(r.studentName);
+                else if (reportedGrade >= 80) groups.benchmarking.push(r.studentName);
+                else if (reportedGrade >= 75) groups.connecting.push(r.studentName);
+                else if (reportedGrade >= 65) groups.developing.push(r.studentName);
+                else groups.emerging.push(r.studentName);
+            });
+
+            Object.keys(groups).forEach(key => {
+                const meta = DepEdBands[key];
+                const studentList = groups[key].join(' | ');
+                csvContent += `"${meta.name}","${meta.response}","${meta.actions}","${studentList}"\n`;
+            });
+
+            triggerCSVDownload(csvContent, `${activeClass.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_remediation_response_plan.csv`);
+            createToast("Instructional framework exported successfully!");
+        }
+
+        function createToast(msg) {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+
+            const div = document.createElement('div');
+            div.className = "bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-xl border border-slate-700/50 text-xs font-semibold flex items-center gap-2 transition-all duration-300 transform translate-y-0 opacity-100";
+            div.innerHTML = `<i class="fa-solid fa-circle-check text-green-400 text-base"></i>${msg}`;
+            container.appendChild(div);
+
+            setTimeout(() => { 
+                div.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => div.remove(), 300);
+            }, 3000);
+        }
+
+        function downloadSheet() {
+            const canvas = document.getElementById('generator-canvas');
+            if (!canvas) return;
+            const link = document.createElement('a');
+            link.download = 'omr_sheets_stencil.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+
+        function setupInteractiveCanvas() {
+            if (!interactiveCanvas) {
+                interactiveCanvas = document.getElementById('scan-display-canvas');
+                if (interactiveCanvas) {
+                    interactiveCtx = interactiveCanvas.getContext('2d', { willReadFrequently: true });
+                }
+            }
+            if (!interactiveCanvas) return;
+
+            const getPointerPos = (e) => {
+                const rect = interactiveCanvas.getBoundingClientRect();
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                const scaleX = interactiveCanvas.width / rect.width;
+                const scaleY = interactiveCanvas.height / rect.height;
+                return {
+                    x: (clientX - rect.left) * scaleX,
+                    y: (clientY - rect.top) * scaleY
+                };
+            };
+
+            const handleDown = (e) => {
+                if(!uploadedImage || !interactiveCanvas) return;
+                const pos = getPointerPos(e);
+                const cw = interactiveCanvas.width;
+                const ch = interactiveCanvas.height;
+                
+                const HitRadius = 30; 
+                activePinIndex = -1;
+                let minDist = Infinity;
+                
+                pins.forEach((pin, i) => {
+                    const px = pin.u * cw;
+                    const py = pin.v * ch;
+                    const dist = Math.hypot(pos.x - px, pos.y - py); 
+                    if (dist < HitRadius && dist < minDist) {
+                        minDist = dist;
+                        activePinIndex = i;
+                    }
+                });
+
+                if(activePinIndex !== -1) drawInteractiveState();
+            };
+
+            const handleMove = (e) => {
+                if (activePinIndex !== -1 && interactiveCanvas) {
+                    e.preventDefault(); 
+                    const pos = getPointerPos(e);
+                    
+                    pins[activePinIndex].u = Math.max(0, Math.min(1, pos.x / interactiveCanvas.width));
+                    pins[activePinIndex].v = Math.max(0, Math.min(1, pos.y / interactiveCanvas.height));
+                    
+                    drawInteractiveState();
+                }
+            };
+
+            const handleUp = () => {
+                if (activePinIndex !== -1) {
+                    activePinIndex = -1;
+                    drawInteractiveState();
+                }
+            };
+
+            interactiveCanvas.addEventListener('mousedown', handleDown);
+            window.addEventListener('mousemove', handleMove, { passive: false });
+            window.addEventListener('mouseup', handleUp);
+
+            interactiveCanvas.addEventListener('touchstart', handleDown, { passive: false });
+            window.addEventListener('touchmove', handleMove, { passive: false });
+            window.addEventListener('touchend', handleUp);
+        }
+
+        function triggerCSVDownload(csvString, filename) {
+            const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            if (link.download !== undefined) {
+                const url = URL.createObjectURL(blob);
+                link.setAttribute("href", url);
+                link.setAttribute("download", filename);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        }
+
+        function quickFillTOS() {
+            tosStructure = [
+                { competency: "Determine measures of central tendency of ungrouped data.", easyPlacement: "1-2", averagePlacement: "3", difficultPlacement: "", answerKeys: "A,B,C" },
+                { competency: "Draw conclusions from statistical data using the measures of central tendency.", easyPlacement: "4-5", averagePlacement: "6", difficultPlacement: "", answerKeys: "D,A,B" },
+                { competency: "Model real-life situations using algebraic expressions.", easyPlacement: "7-8", averagePlacement: "9", difficultPlacement: "", answerKeys: "C,D,A" },
+                { competency: "Add and subtract simple monomials.", easyPlacement: "10-11", averagePlacement: "12", difficultPlacement: "", answerKeys: "B,B,C" },
+                { competency: "Multiply and divide simple monomials, leading to the laws of exponents.", easyPlacement: "13-14", averagePlacement: "15", difficultPlacement: "", answerKeys: "D,A,B" },
+                { competency: "Multiply simple monomials and binomials with simple binomials and multinomials, using the distributive property.", easyPlacement: "16-17", averagePlacement: "", difficultPlacement: "18", answerKeys: "A,C,D" },
+                { competency: "Use special product patterns to multiply binomials.", easyPlacement: "19-20", averagePlacement: "21", difficultPlacement: "", answerKeys: "A,B,C" },
+                { competency: "Completely factor different types of polynomials.", easyPlacement: "22", averagePlacement: "23-24", difficultPlacement: "25", answerKeys: "D,D,B,A" }
+            ];
+            syncTOSFromStructure();
+            createToast("Standard basic-education blueprint template pre-loaded.");
+        }
+
+        function triggerRosterCSVUpload() {
+            const fileInput = document.getElementById('roster-csv-file');
+            if (fileInput) fileInput.click();
+        }
+
+        function downloadRosterCSVTemplate() {
+            const headers = "Learner ID,Student Name,Gender\n";
+            const body = `120091170001,"Juan Dela Cruz",Male\n120091170002,"Maria Santos",Female\n120091170003,"Alex Gonzales",Male\n`;
+            triggerCSVDownload(headers + body, "sample_roster.csv");
+            createToast("Roster CSV template download active.");
+        }
+
+        function handleRosterCSVUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (!selectedClassId) {
+                createToast("Choose a class ledger on the sidebar first.");
+                event.target.value = '';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                const lines = text.replace(/\r/g, '').split('\n');
+                if (lines.length === 0) {
+                    createToast("The chosen CSV file is empty.");
+                    event.target.value = '';
+                    return;
+                }
+
+                const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/^"|"$/g, ''));
+                const idIndex = headers.findIndex(h => h.includes('id') || h.includes('learner') || h.includes('lrn'));
+                const nameIndex = headers.findIndex(h => h.includes('name') || h.includes('student') || h.includes('fullname'));
+                const genderIndex = headers.findIndex(h => h.includes('gender') || h.includes('sex') || h.includes('kasarian'));
+
+                if (idIndex === -1 || nameIndex === -1) {
+                    createToast("Columns must correspond to 'Learner ID' (or ID) and 'Name'.");
+                    event.target.value = '';
+                    return;
+                }
+
+                const activeClass = classes.find(c => c.id === selectedClassId);
+                if (!activeClass) return;
+
+                let importedCount = 0;
+                let updatedCount = 0;
+
+                for (let i = 1; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (!line) continue;
+
+                    const cols = [];
+                    let currentVal = '';
+                    let inQuotes = false;
+                    for (let j = 0; j < line.length; j++) {
+                        const char = line[j];
+                        if (char === '"') {
+                            inQuotes = !inQuotes;
+                        } else if (char === ',' && !inQuotes) {
+                            cols.push(currentVal.trim().replace(/^"|"$/g, ''));
+                            currentVal = '';
+                        } else {
+                            currentVal += char;
+                        }
+                    }
+                    cols.push(currentVal.trim().replace(/^"|"$/g, ''));
+
+                    const idVal = cols[idIndex] ? cols[idIndex].trim() : '';
+                    const nameVal = cols[nameIndex] ? cols[nameIndex].trim() : '';
+                    const genderVal = (genderIndex !== -1 && cols[genderIndex]) ? cols[genderIndex].trim() : 'N/A';
+
+                    if (!idVal || !nameVal) continue;
+
+                    const existingIndex = activeClass.records.findIndex(r => r.learnerId === idVal);
+                    if (existingIndex !== -1) {
+                        activeClass.records[existingIndex].studentName = nameVal;
+                        activeClass.records[existingIndex].gender = genderVal;
+                        updatedCount++;
+                    } else {
+                        activeClass.records.push({
+                            learnerId: idVal,
+                            studentName: nameVal,
+                            gender: genderVal,
+                            absences: 0,
+                            score: 0,
+                            total: 0,
+                            answers: {}
+                        });
+                        importedCount++;
+                    }
+                }
+
+                saveState();
+                saveClassToCloud(activeClass); // Secure database sync
+                renderClassroomDashboard();
+                createToast(`Roster Synced! Logged ${importedCount} and updated ${updatedCount} profiles.`);
+                event.target.value = ''; 
+            };
+            reader.readAsText(file);
+        }
+
+        function openCloudSyncModal() {
+            toggleCloudModal(true);
+        }
+
+        function toggleCloudModal(show) {
+            const modal = document.getElementById('cloud-modal');
+            if (modal) modal.classList.toggle('hidden', !show);
+            const passkeyInput = document.getElementById('cloud-passkey');
+            if (show && passkeyInput) {
+                passkeyInput.value = "";
+                const status = document.getElementById('cloud-modal-status');
+                if (status) status.innerText = "";
+            }
+        }
+
+        function verifyAndActivateCloud() {
+            const passkeyInput = document.getElementById('cloud-passkey');
+            const statusEl = document.getElementById('cloud-modal-status');
+            const keyVal = passkeyInput ? passkeyInput.value.trim() : "";
+
+            if (!keyVal) {
+                if (statusEl) statusEl.innerText = "Please specify a deployment token.";
+                return;
+            }
+
+            if (keyVal === "OMRAccess2026") {
+                const indicator = document.getElementById('cloud-status-indicator');
+                const statusTxt = document.getElementById('cloud-status-text');
+                if (indicator) {
+                    indicator.classList.remove('bg-slate-400');
+                    indicator.classList.add('bg-emerald-500');
+                }
+                if (statusTxt) {
+                    statusTxt.innerText = "Cloud Online";
+                    statusTxt.className = "text-[8px] font-bold text-emerald-600 uppercase tracking-wider";
+                }
+                toggleCloudModal(false);
+                createToast("Cloud synchronization active.");
+            } else {
+                if (statusEl) statusEl.innerHTML = '<span class="text-rose-500 font-semibold"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Token signature mismatch.</span>';
+            }
+        }
+
+        loadState();
+        syncTOSFromStructure();
+        handleGenerate();
+        renderClassroomDashboard();
+        updateClassRegistrationDropdowns();
+
+        initFirebaseAndCloud();
+        checkWorkspaceLockState();
+
+        window.switchTab = switchTab;
+        window.handleGenerate = handleGenerate;
+        window.applyConditionalQuestions = applyConditionalQuestions;
+        window.syncTOSFromStructure = syncTOSFromStructure;
+        window.downloadSheet = downloadSheet;
+        window.quickFillTOS = quickFillTOS;
+        window.addNewTOSRow = addNewTOSRow;
+        window.applyTOSBlueprint = applyTOSBlueprint;
+        window.autoDetectCorners = autoDetectCorners;
+        window.resetCalibrationPins = resetCalibrationPins;
+        window.startCamera = startCamera;
+        window.stopCamera = stopCamera;
+        window.capturePhoto = capturePhoto;
+        window.handleImageUpload = handleImageUpload;
+        window.updateSensitivityLabel = updateSensitivityLabel;
+        window.processScan = processScan;
+        window.commitScanRecord = commitScanRecord;
+        window.toggleCreateClassModal = toggleCreateClassModal;
+        window.createNewClass = createNewClass;
+        window.selectClass = selectClass;
+        window.exportClassToCSV = exportClassToCSV;
+        window.downloadInstructionalActionPlan = downloadInstructionalActionPlan;
+        window.downloadRosterCSVTemplate = downloadRosterCSVTemplate;
+        window.openCloudSyncModal = openCloudSyncModal;
+        window.toggleCloudModal = toggleCloudModal;
+        window.verifyAndActivateCloud = verifyAndActivateCloud;
+        window.triggerRosterCSVUpload = triggerRosterCSVUpload;
+        window.handleRosterCSVUpload = handleRosterCSVUpload;
+
+        // Security exposed handlers
+        window.pressSecureKey = pressSecureKey;
+        window.clearSecureKey = clearSecureKey;
+        window.deleteSecureKey = deleteSecureKey;
+        window.toggleLockScreenManual = toggleLockScreenManual;
+
+    </script>
+</body>
+</html>
